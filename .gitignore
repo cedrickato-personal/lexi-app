@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# prep work (not part of the runtime app)
+/_prep/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
