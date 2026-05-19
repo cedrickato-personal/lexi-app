@@ -435,7 +435,7 @@ const VARK_GUIDANCE: Record<VARKPreference, string> = {
 // ============================================================================
 
 export function buildProfileGuidance(profile: LearnerProfile): string {
-  if (!profile || (!profile.gallupTop10?.length && !profile.vark && !profile.motivation)) {
+  if (!profile || (!profile.gallupTop10?.length && !profile.vark && !profile.motivations?.length)) {
     return ''; // no profile data, no guidance block
   }
 
@@ -521,11 +521,14 @@ export function buildProfileGuidance(profile: LearnerProfile): string {
   }
 
   // --- Motivation block ---
-  if (profile.motivation) {
-    sections.push('### Stated Motivation');
+  if (profile.motivations?.length) {
+    sections.push('### Stated Motivation(s)');
     sections.push('');
+    const motivationList = profile.motivations
+      .map((m) => (m === 'other' && profile.motivationOther ? `other (${profile.motivationOther})` : m))
+      .join(', ');
     sections.push(
-      `The learner is studying this language for: **${profile.motivation}**. Apply the corresponding framing to Section 6 (Cultural Note) and Section 12 (Weekly Challenge) per the Learner Profile Pedagogy document.`,
+      `The learner is studying this language for: **${motivationList}**. Apply the corresponding framing to Section 6 (Cultural Note) and Section 12 (Weekly Challenge) per the Learner Profile Pedagogy document. When multiple motivations are present, weave them in proportion across the curriculum rather than serving only the most-listed one.`,
     );
     sections.push('');
   }

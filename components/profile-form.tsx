@@ -7,6 +7,7 @@ import {
   Activity,
   Sparkles,
   X,
+  Check,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import type {
@@ -107,14 +108,14 @@ export function ProfileForm({
         title="CliftonStrengths Top 10"
         subtitle="If you've taken the Gallup assessment, enter your top 10 themes in order. Top 5 most heavily influence lesson design; positions 6-10 add nuance. Leave blank to skip."
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-x-2 gap-y-5">
           {Array.from({ length: 10 }).map((_, i) => {
             const value = (draft.gallupTop10?.[i] ?? "") as GallupTheme | "";
             const isTop5 = i < 5;
             return (
-              <div key={i} className="relative">
+              <div key={i} className="flex flex-col gap-1.5 min-w-0">
                 <label
-                  className={`block text-[10px] font-mono uppercase tracking-widest mb-1 ${
+                  className={`text-[10px] font-mono uppercase tracking-widest ${
                     isTop5 ? "text-orange-700 font-semibold" : "text-stone-400"
                   }`}
                 >
@@ -135,13 +136,13 @@ export function ProfileForm({
                     );
                   })}
                 </select>
-                {value && (
-                  <span
-                    className={`absolute -bottom-5 left-0 text-[10px] px-1.5 py-0.5 rounded ${DOMAIN_COLOR[THEME_DOMAINS[value]]}`}
-                  >
-                    {THEME_DOMAINS[value]}
-                  </span>
-                )}
+                <span
+                  className={`inline-block self-start text-[10px] px-1.5 py-0.5 rounded leading-none h-4 ${
+                    value ? DOMAIN_COLOR[THEME_DOMAINS[value]] : "invisible"
+                  }`}
+                >
+                  {value ? THEME_DOMAINS[value] : "placeholder"}
+                </span>
               </div>
             );
           })}
@@ -176,30 +177,56 @@ export function ProfileForm({
         </div>
       </Section>
 
-      {/* ───── Motivation ───── */}
+      {/* ───── Motivation (multi-select) ───── */}
       <Section
         kicker="03"
         title="Why are you learning?"
-        subtitle="Shapes how cultural content and weekly challenges are framed."
+        subtitle="Pick any that apply — multiple reasons are common. Shapes how cultural content and weekly challenges are framed."
       >
         <div className="flex flex-wrap gap-2">
           {MOTIVATIONS.map(({ value, label }) => {
-            const active = draft.motivation === value;
+            const motivations = draft.motivations ?? [];
+            const active = motivations.includes(value);
             return (
               <button
                 key={value}
-                onClick={() => set("motivation", active ? undefined : value)}
-                className={`px-3 h-8 rounded-md text-xs font-medium transition-all ${
+                onClick={() => {
+                  const next = active
+                    ? motivations.filter((m) => m !== value)
+                    : [...motivations, value];
+                  const update: Partial<ProfileDraft> = {
+                    motivations: next.length > 0 ? next : undefined,
+                  };
+                  // If user un-checks "other", clear the free-text field too
+                  if (active && value === "other") update.motivationOther = undefined;
+                  onChange({ ...draft, ...update });
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium transition-all ${
                   active
                     ? "bg-stone-900 text-white border border-stone-900"
                     : "border border-stone-200 bg-white text-stone-700 hover:border-stone-300"
                 }`}
               >
+                {active && <Check className="w-3 h-3" />}
                 {label}
               </button>
             );
           })}
         </div>
+        {draft.motivations?.includes("other") && (
+          <div className="mt-3">
+            <label className="text-[10px] font-mono uppercase tracking-widest text-stone-400 mb-1.5 block">
+              Tell us about &quot;Other&quot;
+            </label>
+            <input
+              type="text"
+              value={draft.motivationOther ?? ""}
+              onChange={(e) => set("motivationOther", e.target.value)}
+              placeholder={'e.g., "preparing for a year abroad in Buenos Aires"'}
+              className="w-full max-w-xl h-9 px-3 rounded-md border border-stone-200 bg-white text-sm focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/40"
+            />
+          </div>
+        )}
       </Section>
 
       {/* ───── Time Commitment ───── */}

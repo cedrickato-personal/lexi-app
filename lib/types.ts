@@ -118,8 +118,11 @@ export interface LearnerProfile {
    */
   vark?: VARKPreference;
 
-  /** Why the learner is studying this language. Shapes Section 6 (Cultural) and Section 12 (Weekly Challenge) framing. */
-  motivation?: LearnerMotivation;
+  /** Why the learner is studying this language. Multi-select. Shapes Section 6 (Cultural) and Section 12 (Weekly Challenge) framing. */
+  motivations?: LearnerMotivation[];
+
+  /** Free-text describing "other" motivation when 'other' is selected. */
+  motivationOther?: string;
 
   /** Time commitment per week. Affects pacing recommendations. */
   timeCommitment?: WeeklyTimeCommitment;

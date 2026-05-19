@@ -37,7 +37,10 @@ export default function ProfilePage() {
     const profile: LearnerProfile = {
       gallupTop10: draft.gallupTop10?.length === 10 ? draft.gallupTop10 : undefined,
       vark: draft.vark,
-      motivation: draft.motivation,
+      motivations: draft.motivations?.length ? draft.motivations : undefined,
+      motivationOther: draft.motivations?.includes("other") && draft.motivationOther?.trim()
+        ? draft.motivationOther.trim()
+        : undefined,
       timeCommitment: draft.timeCommitment,
       priorExperience: draft.priorExperience,
       goalLevel: draft.goalLevel,
