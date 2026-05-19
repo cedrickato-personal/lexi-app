@@ -14,6 +14,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { deleteLesson, saveLesson } from "@/lib/storage";
+import { pushLesson, deleteLessonCloud } from "@/lib/storage-sync";
+import { useAuth } from "@/components/auth-provider";
 import type { SavedLesson } from "@/lib/storage";
 import type { Week } from "@/lib/types";
 import type { LanguageMeta } from "@/lib/languages";
@@ -37,6 +39,7 @@ export function LessonViewer({
   onRegenerate,
   onUpdated,
 }: LessonViewerProps) {
+  const { user } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [regenOpen, setRegenOpen] = useState(false);
@@ -76,24 +79,28 @@ export function LessonViewer({
   }, [lang, lesson, week, filename]);
 
   const handleEdit = useCallback(() => {
-    saveLesson(lang.code, week.number, editContent.trim());
+    const content = editContent.trim();
+    saveLesson(lang.code, week.number, content);
+    if (user) pushLesson(user.id, lang.code, week.number, content).catch(() => {});
     toast.success("Lesson updated");
     setEditOpen(false);
     onUpdated();
-  }, [lang.code, week.number, editContent, onUpdated]);
+  }, [lang.code, week.number, editContent, onUpdated, user]);
 
   const handleDelete = useCallback(() => {
     deleteLesson(lang.code, week.number);
+    if (user) deleteLessonCloud(user.id, lang.code, week.number).catch(() => {});
     toast.success("Lesson deleted");
     setDeleteOpen(false);
     onDeleted();
-  }, [lang.code, week.number, onDeleted]);
+  }, [lang.code, week.number, onDeleted, user]);
 
   const handleRegen = useCallback(() => {
     deleteLesson(lang.code, week.number);
+    if (user) deleteLessonCloud(user.id, lang.code, week.number).catch(() => {});
     setRegenOpen(false);
     onRegenerate();
-  }, [lang.code, week.number, onRegenerate]);
+  }, [lang.code, week.number, onRegenerate, user]);
 
   return (
     <div>

@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight, ChevronLeft, ArrowRight, Check, Sparkles } from "lucide-react";
 import { saveProfile, setOnboardingResolved } from "@/lib/storage";
+import { pushProfile } from "@/lib/storage-sync";
 import { Nav } from "@/components/nav";
 import { ProfileForm, type ProfileDraft } from "@/components/profile-form";
+import { useAuth } from "@/components/auth-provider";
 import type { LearnerProfile } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -17,18 +19,22 @@ const STEPS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<ProfileDraft>({});
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     setOnboardingResolved("skipped");
+    if (user) {
+      pushProfile(user.id, {}, { onboardingState: "skipped" }).catch(() => {});
+    }
     toast.success("Skipped — lessons will use the framework's balanced default.", {
       duration: 4000,
     });
     router.push("/");
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const profile: LearnerProfile = {
       gallupTop10: draft.gallupTop10?.length === 10 ? draft.gallupTop10 : undefined,
       vark: draft.vark,
@@ -49,6 +55,14 @@ export default function OnboardingPage() {
       return;
     }
     saveProfile(profile);
+    if (user) {
+      pushProfile(user.id, profile, {
+        onboardingState: "completed",
+        display_name: (user.user_metadata?.full_name as string | undefined) ?? null,
+        email: user.email ?? null,
+        avatar_url: (user.user_metadata?.avatar_url as string | undefined) ?? null,
+      }).catch(() => {});
+    }
     toast.success("Profile saved — lessons will be calibrated to you.");
     router.push("/");
   };

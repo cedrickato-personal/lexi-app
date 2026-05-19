@@ -6,6 +6,8 @@ import { Check, Trash2 } from "lucide-react";
 import { Nav } from "@/components/nav";
 import { ProfileForm, type ProfileDraft } from "@/components/profile-form";
 import { clearProfile, getProfile, saveProfile } from "@/lib/storage";
+import { pushProfile } from "@/lib/storage-sync";
+import { useAuth } from "@/components/auth-provider";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +21,7 @@ import type { LearnerProfile } from "@/lib/types";
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [draft, setDraft] = useState<ProfileDraft>({});
   const [hasProfile, setHasProfile] = useState(false);
   const [clearOpen, setClearOpen] = useState(false);
@@ -47,6 +50,14 @@ export default function ProfilePage() {
       notes: draft.notes?.trim() || undefined,
     };
     saveProfile(profile);
+    if (user) {
+      pushProfile(user.id, profile, {
+        onboardingState: "completed",
+        display_name: (user.user_metadata?.full_name as string | undefined) ?? null,
+        email: user.email ?? null,
+        avatar_url: (user.user_metadata?.avatar_url as string | undefined) ?? null,
+      }).catch(() => {});
+    }
     toast.success("Profile saved");
     setHasProfile(true);
   };

@@ -2,19 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Languages, User } from "lucide-react";
-import { getProfile } from "@/lib/storage";
+import { Languages } from "lucide-react";
 import { LanguageSelector } from "@/components/language-selector";
+import { UserMenu } from "@/components/user-menu";
 
 export function Nav({ activeLang }: { activeLang?: string }) {
   const pathname = usePathname();
-  const [hasProfile, setHasProfile] = useState(false);
-
-  useEffect(() => {
-    setHasProfile(getProfile() !== null);
-  }, [pathname]);
-
   const isAtRoot = pathname === "/";
 
   return (
@@ -37,27 +30,13 @@ export function Nav({ activeLang }: { activeLang?: string }) {
           {!isAtRoot && (
             <Link
               href="/"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors"
             >
               <Languages className="w-3.5 h-3.5" />
               All languages
             </Link>
           )}
-          <Link
-            href="/profile"
-            className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors"
-            title={hasProfile ? "Edit your learner profile" : "Set your learner profile"}
-          >
-            <User className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{hasProfile ? "Profile" : "Profile"}</span>
-            {hasProfile && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
-          </Link>
-          <Link
-            href="/backup"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors"
-          >
-            Backup
-          </Link>
+          <UserMenu />
         </div>
       </div>
     </header>

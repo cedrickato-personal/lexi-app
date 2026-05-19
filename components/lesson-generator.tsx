@@ -5,6 +5,8 @@ import { Copy, Check, ExternalLink, Save, Clipboard } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { buildPrompt } from "@/lib/prompt-builder";
 import { saveLesson, getProfile } from "@/lib/storage";
+import { pushLesson } from "@/lib/storage-sync";
+import { useAuth } from "@/components/auth-provider";
 import { toast } from "sonner";
 
 interface LessonGeneratorProps {
@@ -54,6 +56,7 @@ export function LessonGenerator({
   initialContent = "",
   onSaved,
 }: LessonGeneratorProps) {
+  const { user } = useAuth();
   const [copied, setCopied] = useState(false);
   const [opened, setOpened] = useState(false);
   const [response, setResponse] = useState(initialContent);
@@ -87,10 +90,14 @@ export function LessonGenerator({
       toast.error("Lesson seems too short. Add more content or paste the full response.");
       return;
     }
-    saveLesson(langCode, weekNumber, response.trim());
-    toast.success("Lesson saved");
+    const content = response.trim();
+    saveLesson(langCode, weekNumber, content);
+    if (user) {
+      pushLesson(user.id, langCode, weekNumber, content).catch(() => {});
+    }
+    toast.success(user ? "Lesson saved · synced to cloud" : "Lesson saved");
     onSaved();
-  }, [langCode, weekNumber, response, onSaved]);
+  }, [langCode, weekNumber, response, onSaved, user]);
 
   const charCount = response.length;
   const minChars = 200;

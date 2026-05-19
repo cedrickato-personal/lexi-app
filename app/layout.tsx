@@ -16,6 +16,7 @@ import {
 import "./globals.css";
 import { Toaster } from "sonner";
 import { OnboardingGate } from "@/components/onboarding-gate";
+import { AuthProvider } from "@/components/auth-provider";
 
 const fontSans = Geist({ variable: "--font-sans", subsets: ["latin"], display: "swap" });
 const fontMono = Geist_Mono({ variable: "--font-mono", subsets: ["latin"], display: "swap" });
@@ -63,7 +64,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={fontVars}>
       <body className="font-sans antialiased text-stone-900 bg-[#FAF8F3] selection:bg-orange-200/60">
         <div className="fixed inset-0 -z-10 bg-gradient-to-b from-[#FAF8F3] via-[#FAF8F3] to-[#F5F0E8] pointer-events-none" />
-        <OnboardingGate>{children}</OnboardingGate>
+        <AuthProvider>
+          <OnboardingGate>{children}</OnboardingGate>
+        </AuthProvider>
         <Toaster position="bottom-right" richColors />
       </body>
     </html>

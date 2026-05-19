@@ -21,6 +21,8 @@ import {
   saveNote,
   touchLanguage,
 } from "@/lib/storage";
+import { pushNote } from "@/lib/storage-sync";
+import { useAuth } from "@/components/auth-provider";
 import {
   getLanguageReference,
   getLanguageAddendum,
@@ -48,6 +50,7 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
   const curriculum = lang ? getCurriculum(langCode) : null;
   const theme = lang ? FAMILY_THEMES[lang.family] : null;
 
+  const { user } = useAuth();
   const [week, setWeek] = useState<Week | null>(null);
   const [lesson, setLesson] = useState<SavedLesson | null>(null);
   const [note, setNote] = useState("");
@@ -83,9 +86,10 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
   const handleNoteSave = useCallback(() => {
     if (!week) return;
     saveNote(langCode, week.number, note);
+    if (user) pushNote(user.id, langCode, week.number, note).catch(() => {});
     setNoteSaved(true);
     toast.success("Notes saved");
-  }, [langCode, week, note]);
+  }, [langCode, week, note, user]);
 
   if (!lang || !curriculum || !theme || !week) return null;
 
