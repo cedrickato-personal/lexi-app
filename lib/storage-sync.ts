@@ -35,6 +35,7 @@ export async function pushProfile(
     time_commitment: profile.timeCommitment ?? null,
     prior_experience: profile.priorExperience ?? null,
     goal_level: profile.goalLevel ?? null,
+    interested_languages: profile.interestedLanguages ?? null,
     notes: profile.notes ?? null,
     onboarding_state: meta?.onboardingState ?? null,
     last_used_language: meta?.lastUsedLanguage ?? null,
@@ -72,6 +73,7 @@ export async function pullProfile(userId: string): Promise<
     timeCommitment: (data.time_commitment as LearnerProfile["timeCommitment"]) ?? undefined,
     priorExperience: (data.prior_experience as LearnerProfile["priorExperience"]) ?? undefined,
     goalLevel: (data.goal_level as LearnerProfile["goalLevel"]) ?? undefined,
+    interestedLanguages: (data.interested_languages as string[] | null) ?? undefined,
     notes: data.notes ?? undefined,
     onboarding_state: data.onboarding_state,
     display_name: data.display_name,
@@ -209,6 +211,7 @@ export async function syncOnSignIn(
       timeCommitment: cloudProfile.timeCommitment,
       priorExperience: cloudProfile.priorExperience,
       goalLevel: cloudProfile.goalLevel,
+      interestedLanguages: cloudProfile.interestedLanguages,
       notes: cloudProfile.notes,
     };
     const hasAnything = Object.values(local).some((v) =>

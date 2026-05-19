@@ -30,7 +30,7 @@ function Step({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative">
+    <div id={`step-${n}`} className="relative scroll-mt-20">
       <div className="flex items-center gap-3 mb-4">
         <div
           className={`relative w-8 h-8 rounded-full flex items-center justify-center font-mono text-xs font-bold transition-colors shrink-0 ${
@@ -168,8 +168,8 @@ export function LessonGenerator({
             <Textarea
               value={response}
               onChange={(e) => setResponse(e.target.value)}
-              placeholder={`### 1. Lesson Overview\n\nBy the end of this week, you will...`}
-              className="font-mono text-xs leading-relaxed min-h-72 resize-y border-stone-200 focus-visible:border-orange-300 focus-visible:ring-orange-200/40 bg-stone-50/40"
+              placeholder="Paste the full lesson markdown here — should start with `### 1. Lesson Overview`"
+              className="font-mono text-xs leading-snug min-h-72 resize-y border-stone-200 focus-visible:border-orange-300 focus-visible:ring-orange-200/40 bg-stone-50/40 placeholder:font-sans placeholder:text-sm placeholder:leading-relaxed"
             />
             <div className="flex justify-between items-center mt-4">
               <p className="text-xs text-stone-400 tabular-nums">

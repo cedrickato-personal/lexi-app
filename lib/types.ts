@@ -133,6 +133,12 @@ export interface LearnerProfile {
   /** Where the learner wants to end up. Affects curriculum compression/extension. */
   goalLevel?: StatedGoalLevel;
 
+  /**
+   * Languages the learner wants to study. ISO codes matching LANGUAGES in lib/languages.ts
+   * (e.g., ["es", "ja", "uk"]). Prioritized on the home screen; all 31 remain browsable.
+   */
+  interestedLanguages?: string[];
+
   /** Free-form notes — e.g., specific interest topics, languages already known, learning history. */
   notes?: string;
 }

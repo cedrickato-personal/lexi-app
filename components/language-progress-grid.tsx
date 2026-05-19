@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, ArrowUpRight } from "lucide-react";
-import { LANGUAGES_LIST, FSI_CATEGORIES, type LanguageMeta } from "@/lib/languages";
+import { ArrowUpRight } from "lucide-react";
+import { LANGUAGES, LANGUAGES_LIST, FSI_CATEGORIES, type LanguageMeta } from "@/lib/languages";
 import { FAMILY_THEMES } from "@/lib/family-theme";
 
 interface LanguageProgressGridProps {
@@ -53,6 +53,32 @@ export function LanguageProgressGrid({
           </section>
         );
       })}
+    </div>
+  );
+}
+
+// Compact row of "priority" language cards — used when the user has picked
+// preferred languages via their profile.
+export function LanguagePriorityRow({
+  codes,
+  progressByLang,
+  lastUsed,
+}: {
+  codes: string[];
+  progressByLang: Record<string, { completed: number; total: number }>;
+  lastUsed?: string | null;
+}) {
+  const langs = codes.map((c) => LANGUAGES[c]).filter(Boolean) as LanguageMeta[];
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      {langs.map((lang) => (
+        <LanguageCard
+          key={lang.code}
+          lang={lang}
+          progress={progressByLang[lang.code]}
+          isLastUsed={lastUsed === lang.code}
+        />
+      ))}
     </div>
   );
 }

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback, use } from "react";
+import { useEffect, useState, useCallback, use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChevronLeft, ChevronRight, Sparkles, FileText, BookOpen, Wand2 } from "lucide-react";
+import { TableOfContents, useMarkdownToc, type TocItem } from "@/components/table-of-contents";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -91,6 +92,38 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
     toast.success("Notes saved");
   }, [langCode, week, note, user]);
 
+  // TOC: lesson content sections (when a lesson is saved)
+  const lessonToc = useMarkdownToc(lesson?.content ?? "", false);
+
+  const tocItems: TocItem[] = useMemo(() => {
+    const baseItems: TocItem[] = [
+      { id: "week-spec", label: "Week spec", level: 1 },
+    ];
+    if (activeTab === "generate" || activeTab === "regenerate") {
+      return [
+        ...baseItems,
+        { id: "step-01", label: "1. Copy the prompt", level: 1 },
+        { id: "step-02", label: "2. Paste into Claude.ai", level: 1 },
+        { id: "step-03", label: "3. Paste the response back", level: 1 },
+      ];
+    }
+    if (activeTab === "lesson" && lessonToc.length) {
+      return [...baseItems, ...lessonToc];
+    }
+    if (activeTab === "notes") {
+      return [...baseItems, { id: "notes-section", label: "Your notes", level: 1 }];
+    }
+    if (activeTab === "reference") {
+      return [
+        ...baseItems,
+        { id: "ref-addendum", label: "Pedagogical addendum", level: 1 },
+        { id: "ref-language", label: "Language reference", level: 1 },
+        { id: "ref-foundations", label: "Pedagogy foundations", level: 1 },
+      ];
+    }
+    return baseItems;
+  }, [activeTab, lessonToc]);
+
   if (!lang || !curriculum || !theme || !week) return null;
 
   const prev = weekNumber > 1 ? weekNumber - 1 : null;
@@ -104,7 +137,8 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
     <>
       <Nav activeLang={langCode} />
       <main className="min-h-[calc(100vh-3.5rem)]">
-        <div className="max-w-4xl mx-auto px-6 py-10">
+        <div className="max-w-6xl mx-auto px-6 py-10 lg:grid lg:grid-cols-[1fr_220px] lg:gap-x-12">
+          <div className="min-w-0">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-1.5 text-xs text-stone-500 mb-8 font-mono">
             <Link href="/" className="hover:text-orange-800 transition-colors">all</Link>
@@ -152,7 +186,7 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
           </div>
 
           {/* Week spec card */}
-          <div className="bg-white rounded-2xl border border-stone-200/70 shadow-sm mb-10 overflow-hidden">
+          <div id="week-spec" className="bg-white rounded-2xl border border-stone-200/70 shadow-sm mb-10 overflow-hidden scroll-mt-20">
             <div className="p-7 md:p-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-7">
                 <div>
@@ -273,7 +307,7 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
             )}
 
             <TabsContent value="notes">
-              <div className="bg-white rounded-xl border border-stone-200/70 shadow-sm p-6">
+              <div id="notes-section" className="bg-white rounded-xl border border-stone-200/70 shadow-sm p-6 scroll-mt-20">
                 <div className="flex items-baseline justify-between gap-4 mb-3 flex-wrap">
                   <h3 className="font-display text-lg font-semibold text-stone-900 tracking-tight">
                     Your notes for Week {week.number}
@@ -303,7 +337,7 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
             <TabsContent value="reference">
               <div className="space-y-6">
                 {addendum && (
-                  <details className="bg-white rounded-xl border border-stone-200/70 shadow-sm group">
+                  <details id="ref-addendum" className="bg-white rounded-xl border border-stone-200/70 shadow-sm group scroll-mt-20">
                     <summary className="cursor-pointer px-5 py-4 list-none hover:bg-stone-50/60 transition-colors">
                       <div className="flex items-baseline justify-between gap-4">
                         <h3 className="font-display text-lg font-semibold text-stone-900 tracking-tight">
@@ -319,7 +353,7 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
                     </div>
                   </details>
                 )}
-                <details className="bg-white rounded-xl border border-stone-200/70 shadow-sm group">
+                <details id="ref-language" className="bg-white rounded-xl border border-stone-200/70 shadow-sm group scroll-mt-20">
                   <summary className="cursor-pointer px-5 py-4 list-none hover:bg-stone-50/60 transition-colors">
                     <div className="flex items-baseline justify-between gap-4">
                       <h3 className="font-display text-lg font-semibold text-stone-900 tracking-tight">
@@ -334,7 +368,7 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
                     </article>
                   </div>
                 </details>
-                <details className="bg-white rounded-xl border border-stone-200/70 shadow-sm group">
+                <details id="ref-foundations" className="bg-white rounded-xl border border-stone-200/70 shadow-sm group scroll-mt-20">
                   <summary className="cursor-pointer px-5 py-4 list-none hover:bg-stone-50/60 transition-colors">
                     <div className="flex items-baseline justify-between gap-4">
                       <h3 className="font-display text-lg font-semibold text-stone-900 tracking-tight">
@@ -388,6 +422,14 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
               </Link>
             ) : <div />}
           </div>
+          </div>
+
+          {/* Sidebar TOC */}
+          <aside className="hidden lg:block">
+            <div className="sticky top-20 pt-2">
+              <TableOfContents items={tocItems} />
+            </div>
+          </aside>
         </div>
       </main>
     </>

@@ -5,22 +5,26 @@
 
 -- 1. Profiles -----------------------------------------------------------------
 create table if not exists public.profiles (
-  user_id            uuid primary key references auth.users(id) on delete cascade,
-  display_name       text,
-  email              text,
-  avatar_url         text,
-  gallup_top10       text[],
-  vark               text,
-  motivations        text[],
-  motivation_other   text,
-  time_commitment    text,
-  prior_experience   text,
-  goal_level         text,
-  notes              text,
-  onboarding_state   text,                              -- 'completed' | 'skipped' | null
-  last_used_language text,
-  updated_at         timestamptz not null default now()
+  user_id              uuid primary key references auth.users(id) on delete cascade,
+  display_name         text,
+  email                text,
+  avatar_url           text,
+  gallup_top10         text[],
+  vark                 text,
+  motivations          text[],
+  motivation_other     text,
+  time_commitment      text,
+  prior_experience     text,
+  goal_level           text,
+  notes                text,
+  interested_languages text[],                            -- e.g., {'es','ja','uk'}
+  onboarding_state     text,                              -- 'completed' | 'skipped' | null
+  last_used_language   text,
+  updated_at           timestamptz not null default now()
 );
+
+-- Migration: add column if profiles table already exists from earlier schema.
+alter table public.profiles add column if not exists interested_languages text[];
 
 alter table public.profiles enable row level security;
 

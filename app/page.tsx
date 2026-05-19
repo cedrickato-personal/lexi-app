@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Library, Sparkles } from "lucide-react";
 import { Nav } from "@/components/nav";
-import { LanguageProgressGrid } from "@/components/language-progress-grid";
+import { LanguageProgressGrid, LanguagePriorityRow } from "@/components/language-progress-grid";
 import { LANGUAGES, LANGUAGES_LIST } from "@/lib/languages";
 import {
   getAllProgress,
@@ -12,20 +12,24 @@ import {
   getMostRecent,
   getProfile,
 } from "@/lib/storage";
+import type { LearnerProfile } from "@/lib/types";
 
 export default function HomePage() {
   const [progressByLang, setProgressByLang] = useState<Record<string, { completed: number; total: number }>>({});
   const [lastUsed, setLastUsed] = useState<string | null>(null);
-  const [hasProfile, setHasProfile] = useState(false);
+  const [profile, setProfile] = useState<LearnerProfile | null>(null);
   const [mostRecent, setMostRecent] = useState<{ lang: string; week: number } | null>(null);
 
   useEffect(() => {
     setProgressByLang(getAllProgress());
     setLastUsed(getLastUsed());
-    setHasProfile(getProfile() !== null);
+    setProfile(getProfile());
     const recent = getMostRecent();
     if (recent) setMostRecent({ lang: recent.lang, week: recent.week });
   }, []);
+
+  const hasProfile = profile !== null;
+  const priorityLanguages = (profile?.interestedLanguages ?? []).filter((c) => LANGUAGES[c]);
 
   const totalCompleted = Object.values(progressByLang).reduce((s, p) => s + p.completed, 0);
   const totalPossible = Object.values(progressByLang).reduce((s, p) => s + p.total, 0);
@@ -109,16 +113,44 @@ export default function HomePage() {
           </section>
         )}
 
+        {/* PRIORITY LANGUAGES */}
+        {priorityLanguages.length > 0 && (
+          <section id="your-languages" className="max-w-7xl mx-auto px-6 pb-20 scroll-mt-20">
+            <div className="flex items-baseline justify-between gap-6 flex-wrap mb-6 max-w-5xl">
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-orange-800/80 font-medium mb-3 flex items-center gap-2">
+                  <span className="inline-block w-8 h-px bg-orange-700/60" />
+                  Your Languages
+                </p>
+                <h2 className="font-display text-3xl md:text-4xl font-semibold text-stone-900 tracking-tight">
+                  The ones you&apos;re focused on
+                </h2>
+              </div>
+              <Link
+                href="/profile"
+                className="text-xs text-stone-500 hover:text-orange-800 transition-colors"
+              >
+                Edit preferences →
+              </Link>
+            </div>
+            <LanguagePriorityRow
+              codes={priorityLanguages}
+              progressByLang={progressByLang}
+              lastUsed={lastUsed}
+            />
+          </section>
+        )}
+
         {/* LANGUAGE GRID */}
         <section id="languages" className="max-w-7xl mx-auto px-6 pb-24 scroll-mt-20">
           <div className="flex items-baseline justify-between gap-6 flex-wrap mb-8 max-w-5xl">
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-orange-800/80 font-medium mb-3 flex items-center gap-2">
                 <span className="inline-block w-8 h-px bg-orange-700/60" />
-                The Languages
+                {priorityLanguages.length > 0 ? "All Languages" : "The Languages"}
               </p>
               <h2 className="font-display text-3xl md:text-4xl font-semibold text-stone-900 tracking-tight">
-                Pick where to begin
+                {priorityLanguages.length > 0 ? "Explore all 31" : "Pick where to begin"}
               </h2>
             </div>
             <p className="text-sm text-stone-500 max-w-xs">

@@ -20,6 +20,8 @@ import type {
   WeeklyTimeCommitment,
 } from "@/lib/types";
 import { THEME_DOMAINS, type GallupDomain } from "@/lib/learner-profile-engine";
+import { LANGUAGES_LIST, FSI_CATEGORIES } from "@/lib/languages";
+import { FAMILY_THEMES } from "@/lib/family-theme";
 
 export type ProfileDraft = Partial<LearnerProfile>;
 
@@ -310,9 +312,23 @@ export function ProfileForm({
         </div>
       </Section>
 
-      {/* ───── Notes ───── */}
+      {/* ───── Languages of interest (multi-select) ───── */}
       <Section
         kicker="07"
+        title="Languages you want to learn"
+        subtitle="Pick any that interest you. They'll be prioritized on your home screen — you can still explore all 31 anytime."
+      >
+        <LanguagePicker
+          selected={draft.interestedLanguages ?? []}
+          onChange={(next) =>
+            onChange({ ...draft, interestedLanguages: next.length ? next : undefined })
+          }
+        />
+      </Section>
+
+      {/* ───── Notes ───── */}
+      <Section
+        kicker="08"
         title="Anything else?"
         subtitle="Languages you already speak, specific interests, learning history — anything that would help calibrate lessons."
       >
@@ -347,6 +363,87 @@ function Section({
       {subtitle && <p className="text-sm text-stone-600 leading-relaxed max-w-2xl mb-4">{subtitle}</p>}
       {children}
     </section>
+  );
+}
+
+function LanguagePicker({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const toggle = (code: string) => {
+    if (selected.includes(code)) {
+      onChange(selected.filter((c) => c !== code));
+    } else {
+      onChange([...selected, code]);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <p className="text-xs text-stone-500">
+          {selected.length === 0
+            ? "None selected yet — your home will show all 31 languages."
+            : `${selected.length} selected · ${selected.length === 1 ? "shown" : "all shown"} on your home screen`}
+        </p>
+        {selected.length > 0 && (
+          <button
+            onClick={() => onChange([])}
+            className="text-xs text-stone-500 hover:text-orange-800 transition-colors"
+          >
+            Clear all
+          </button>
+        )}
+      </div>
+
+      {FSI_CATEGORIES.map((cat) => {
+        const langs = LANGUAGES_LIST.filter((l) => l.fsiCategory === cat.cat);
+        if (!langs.length) return null;
+        return (
+          <div key={cat.cat}>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-stone-400 mb-2">
+              {cat.label}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {langs.map((lang) => {
+                const theme = FAMILY_THEMES[lang.family];
+                const active = selected.includes(lang.code);
+                return (
+                  <button
+                    key={lang.code}
+                    onClick={() => toggle(lang.code)}
+                    className={`inline-flex items-center gap-2 pl-2 pr-3 h-8 rounded-md text-xs font-medium border transition-all ${
+                      active
+                        ? "border-stone-900 bg-stone-900 text-white shadow-sm"
+                        : "border-stone-200 bg-white text-stone-700 hover:border-stone-300"
+                    }`}
+                  >
+                    {active ? (
+                      <Check className="w-3 h-3 shrink-0" />
+                    ) : (
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: theme.accentHex }}
+                      />
+                    )}
+                    <span>{lang.name}</span>
+                    <span
+                      className={`text-[10px] ${active ? "text-stone-300" : "text-stone-400"}`}
+                      style={lang.script !== "Latin" ? { fontFamily: theme.targetFontStack } : undefined}
+                    >
+                      {lang.nativeName}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

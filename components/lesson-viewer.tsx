@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Download, Edit2, Trash2, RefreshCw, Copy, Check } from "lucide-react";
+import { slugifyHeading } from "@/components/table-of-contents";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -153,7 +154,29 @@ export function LessonViewer({
           } as React.CSSProperties}
           dir={lang.rtl ? "auto" : "ltr"}
         >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{lesson.content}</ReactMarkdown>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              h2: ({ children, ...rest }) => {
+                const text = typeof children === "string" ? children : String(children);
+                return (
+                  <h2 id={slugifyHeading(text)} className="scroll-mt-20" {...rest}>
+                    {children}
+                  </h2>
+                );
+              },
+              h3: ({ children, ...rest }) => {
+                const text = typeof children === "string" ? children : String(children);
+                return (
+                  <h3 id={slugifyHeading(text)} className="scroll-mt-20" {...rest}>
+                    {children}
+                  </h3>
+                );
+              },
+            }}
+          >
+            {lesson.content}
+          </ReactMarkdown>
         </div>
       </article>
 

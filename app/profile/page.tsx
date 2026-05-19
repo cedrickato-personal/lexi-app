@@ -47,6 +47,7 @@ export default function ProfilePage() {
       timeCommitment: draft.timeCommitment,
       priorExperience: draft.priorExperience,
       goalLevel: draft.goalLevel,
+      interestedLanguages: draft.interestedLanguages?.length ? draft.interestedLanguages : undefined,
       notes: draft.notes?.trim() || undefined,
     };
     saveProfile(profile);
