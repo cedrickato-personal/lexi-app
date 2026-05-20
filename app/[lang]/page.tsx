@@ -148,28 +148,28 @@ export default function LangHomePage({ params }: { params: Promise<{ lang: strin
         <section className="max-w-5xl mx-auto px-6 pb-24">
           <p className="text-xs uppercase tracking-[0.22em] text-orange-800/80 font-medium mb-4 flex items-center gap-2">
             <span className="inline-block w-8 h-px bg-orange-700/60" />
-            Continue
+            Keep going
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <QuickLink
               href={`/${langCode}/curriculum`}
               icon={Library}
-              title="Curriculum"
-              desc={`Browse all ${curriculum.totalWeeks} weeks, organized by CEFR level.`}
+              title="The path"
+              desc={`All ${curriculum.totalWeeks} weeks from A1 to C2 — browse, jump around, take what you need.`}
               accent={theme.accentHex}
             />
             <QuickLink
               href={`/${langCode}/resources`}
               icon={BookOpen}
               title="Resources"
-              desc={`Curated podcasts, courses, books, films, and tutors for ${lang.name}.`}
+              desc={`Curated podcasts, books, films, tutors, and apps for learning ${lang.name}.`}
               accent={theme.accentHex}
             />
             <QuickLink
               href={`/${langCode}/practice`}
               icon={Dumbbell}
               title="Daily practice"
-              desc="The habits that turn weekly lessons into real fluency."
+              desc="The small habits between lessons that turn study into real fluency."
               accent={theme.accentHex}
             />
           </div>

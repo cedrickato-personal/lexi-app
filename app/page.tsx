@@ -43,16 +43,17 @@ export default function HomePage() {
         <section className="max-w-5xl mx-auto px-6 pt-20 pb-20">
           <p className="text-xs font-medium uppercase tracking-[0.22em] text-orange-800/80 mb-6 flex items-center gap-2">
             <span className="inline-block w-8 h-px bg-orange-700/60" />
-            31 languages · ~5,330 total lessons
+            31 languages · A1 → C2 · Calibrated to you
           </p>
           <h1 className="font-display text-5xl md:text-7xl lg:text-[5.5rem] tracking-tight text-stone-900 leading-[0.95] mb-8 max-w-4xl">
-            One curriculum.
+            Learn any language.
             <br />
-            <span className="italic text-orange-800 font-medium">Every</span> major language.
+            <span className="italic text-orange-800 font-medium">Your</span> way.
           </h1>
           <p className="text-lg md:text-xl text-stone-600 max-w-2xl leading-relaxed mb-10">
-            Lexi generates research-grounded weekly lessons from A1 to C2 across 31 languages —
-            calibrated to your CliftonStrengths, learning modality, and goals. Powered by Claude.ai.
+            Lexi adapts to how you learn — your strengths, your modality, your pace — and walks
+            you from beginner to mastery across any of 31 languages. Personalized lessons,
+            daily practice, and (soon) a community of fellow learners.
           </p>
           <div className="flex items-center gap-3 flex-wrap">
             {lastUsed && LANGUAGES[lastUsed] ? (
@@ -147,10 +148,10 @@ export default function HomePage() {
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-orange-800/80 font-medium mb-3 flex items-center gap-2">
                 <span className="inline-block w-8 h-px bg-orange-700/60" />
-                {priorityLanguages.length > 0 ? "All Languages" : "The Languages"}
+                {priorityLanguages.length > 0 ? "All Languages" : "Start Learning"}
               </p>
               <h2 className="font-display text-3xl md:text-4xl font-semibold text-stone-900 tracking-tight">
-                {priorityLanguages.length > 0 ? "Explore all 31" : "Pick where to begin"}
+                {priorityLanguages.length > 0 ? "Explore all 31" : "Pick a language"}
               </h2>
             </div>
             <p className="text-sm text-stone-500 max-w-xs">
@@ -165,28 +166,28 @@ export default function HomePage() {
         <section id="how" className="max-w-5xl mx-auto px-6 pb-24 scroll-mt-20">
           <div className="flex items-baseline justify-between mb-10">
             <h2 className="font-display text-3xl md:text-4xl font-semibold text-stone-900 tracking-tight">
-              How it works
+              How learning works in Lexi
             </h2>
             <p className="text-sm text-stone-500 hidden md:block">
-              Three steps per lesson · about 5 minutes
+              Five minutes a week to set up · the rest is on you (and us)
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
                 n: "01",
-                title: "Pick a language & week",
-                desc: "Browse any of 31 languages, structured A1→C2 across CEFR levels. Each week has a clear focus and optional cultural anchors.",
+                title: "Pick a language",
+                desc: "Choose any of 31 languages. Each one has a clear path from A1 beginner to C2 mastery — but you set the pace, the focus, and where you stop.",
               },
               {
                 n: "02",
-                title: "Copy & paste",
-                desc: "Lexi builds a full prompt — pedagogy + language reference + your profile + week spec. Copy it into Claude.ai and wait for the lesson.",
+                title: "Get this week's lesson",
+                desc: "Lexi builds a lesson around how you learn best — your strengths, modality, and goals — drawing on Claude.ai. Save it and you're set for the week.",
               },
               {
                 n: "03",
-                title: "Save the lesson",
-                desc: "Paste back the response. It's stored locally, namespaced per language, and ready to export for the future learning app.",
+                title: "Practice & connect",
+                desc: "Daily practice keeps things sticky between lessons. A community of fellow learners is coming — until then, you can share progress with friends.",
               },
             ].map(({ n, title, desc }) => (
               <div
@@ -208,7 +209,7 @@ export default function HomePage() {
               <div>
                 <p className="font-display text-xl font-semibold text-stone-900">Lexi</p>
                 <p className="text-xs text-stone-400 mt-1">
-                  Multi-language curriculum generator · {LANGUAGES_LIST.length} languages
+                  Learn any of {LANGUAGES_LIST.length} languages · Your way
                 </p>
               </div>
               <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-stone-500">

@@ -18,7 +18,7 @@ export function Nav({ activeLang }: { activeLang?: string }) {
             Lexi
           </span>
           <span className="text-[10px] uppercase tracking-[0.18em] text-stone-400 hidden sm:inline font-medium">
-            Curriculum
+            Language Learning
           </span>
         </Link>
 

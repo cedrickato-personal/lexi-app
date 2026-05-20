@@ -97,20 +97,20 @@ function WelcomeStep({ onContinue, onSkip }: { onContinue: () => void; onSkip: (
       </p>
 
       <h1 className="font-display text-5xl md:text-6xl font-semibold text-stone-900 tracking-tight leading-[1.02] mb-7">
-        A curriculum generator,
+        Language learning,
         <br />
         <span className="italic text-orange-800">calibrated to you</span>.
       </h1>
 
       <p className="text-lg text-stone-600 leading-relaxed mb-3 max-w-xl">
-        Lexi generates research-grounded weekly lessons across 31 languages — from A1
-        beginner to C2 mastery — powered by Claude.ai.
+        Lexi helps you learn any of 31 languages — from A1 beginner to C2 mastery —
+        adapted to how you actually learn best.
       </p>
       <p className="text-base text-stone-500 leading-relaxed mb-10 max-w-xl">
-        Before you start, we&apos;d like to know a few things about how you learn best.
-        It takes about 3 minutes, and every lesson afterward is calibrated to your
-        strengths and preferences. <span className="text-stone-700">Completely optional</span> —
-        you can skip and still get excellent lessons.
+        Before you start, we&apos;d like to know a few things about you. It takes about
+        3 minutes, and every lesson afterward is calibrated to your strengths,
+        modality, and goals. <span className="text-stone-700">Completely optional</span> —
+        you can skip and still learn great.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-10">
@@ -201,11 +201,11 @@ function ProfileStep({
         Step 2 of 2 · Profile
       </p>
       <h1 className="font-display text-4xl md:text-5xl font-semibold text-stone-900 tracking-tight mb-3">
-        Calibrate your <span className="italic text-orange-800">lessons</span>
+        Tell us how <span className="italic text-orange-800">you</span> learn
       </h1>
       <p className="text-base text-stone-600 max-w-2xl mb-10 leading-relaxed">
         Fill in what feels relevant — leave the rest blank. Every section is optional.
-        The more you share, the more lesson generation can be tuned to you.
+        The more you share, the more your lessons can adapt to you.
       </p>
 
       <ProfileForm draft={draft} onChange={setDraft} />

@@ -92,21 +92,22 @@ export default function AuthPage() {
           <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-amber-200/20 rounded-full blur-3xl pointer-events-none" />
           <Link href="/" className="font-display text-3xl font-semibold text-stone-900 tracking-tight relative">
             Lexi
-            <span className="ml-2 text-[10px] uppercase tracking-[0.18em] text-stone-400 font-medium">Curriculum</span>
+            <span className="ml-2 text-[10px] uppercase tracking-[0.18em] text-stone-400 font-medium">Language Learning</span>
           </Link>
           <div className="relative max-w-md">
             <p className="text-xs font-medium uppercase tracking-[0.22em] text-orange-800/80 mb-5 flex items-center gap-2">
               <span className="inline-block w-8 h-px bg-orange-700/60" />
-              31 languages · A1 → C2
+              31 languages · Your way
             </p>
             <h2 className="font-display text-5xl xl:text-6xl font-semibold text-stone-900 tracking-tight leading-[0.98] mb-6">
-              A curriculum
+              Learn any language,
               <br />
-              <span className="italic text-orange-800">calibrated</span> to you.
+              <span className="italic text-orange-800">your</span> way.
             </h2>
             <p className="text-base text-stone-600 leading-relaxed">
-              Sign in to sync your progress across devices, or continue as guest and keep
-              everything on this device.
+              Sign in to sync your progress across devices, join a community of learners
+              (soon), and pick up wherever you left off. Or continue as guest — your data
+              stays on this device.
             </p>
           </div>
           <p className="text-xs text-stone-400 relative">

@@ -97,15 +97,16 @@ export default function CurriculumPage({ params }: { params: Promise<{ lang: str
               className="text-xs uppercase tracking-[0.22em] font-medium"
               style={{ color: theme.accentHex }}
             >
-              {lang.name} · {curriculum.totalWeeks} weeks
+              {curriculum.totalWeeks} weeks · A1 → C2
             </p>
           </div>
           <h1 className="font-display text-4xl md:text-5xl font-semibold text-stone-900 tracking-tight mb-3">
-            The <span className="italic" style={{ color: theme.accentHex }}>curriculum</span>
+            Your path to <span className="italic" style={{ color: theme.accentHex }}>{lang.name}</span>
           </h1>
           <p className="text-base text-stone-600 max-w-2xl leading-relaxed mb-10">
-            All {curriculum.totalWeeks} weeks across the six CEFR levels. Each week is
-            independently generatable but reads best in order.
+            {curriculum.totalWeeks} weeks of structured learning, A1 to C2. Each week stands on
+            its own but they read best in order — like chapters in a book you&apos;re writing about
+            yourself.
           </p>
 
           {/* Controls */}

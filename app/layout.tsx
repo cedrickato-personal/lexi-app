@@ -39,9 +39,9 @@ const fontHebrew = Noto_Sans_Hebrew({ variable: "--font-hebrew", subsets: ["lati
 const fontThai = Noto_Sans_Thai({ variable: "--font-thai", subsets: ["latin", "thai"], weight: ["400", "500", "700"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Lexi — A multi-language curriculum generator",
+  title: "Lexi — Learn any language, your way",
   description:
-    "Generate research-grounded weekly lessons across 31 languages — from A1 to C2 — powered by Claude.ai.",
+    "Learn any of 31 languages from beginner to mastery — calibrated to how you learn best. Personalized weekly practice, structured paths, and (soon) a community of fellow learners.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
