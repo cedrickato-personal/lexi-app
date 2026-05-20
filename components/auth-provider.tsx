@@ -57,11 +57,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     const supabase = createClient();
 
-    // Initial load
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user ?? null);
-      setLoading(false);
-    });
+    // Initial load — always release the loading state, even on error,
+    // so the UI never gets stuck on the splash screen.
+    supabase.auth
+      .getUser()
+      .then(({ data, error }) => {
+        if (error) console.warn("[auth] getUser error:", error.message);
+        setUser(data.user ?? null);
+      })
+      .catch((err) => {
+        console.error("[auth] getUser threw:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
     // Subscribe to auth changes — sync localStorage <-> Supabase on sign-in
     let lastSyncedUserId: string | null = null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Mail, Lock, User, Loader2, AlertCircle } from "lucide-react";
@@ -12,6 +12,14 @@ import { toast } from "sonner";
 type Mode = "sign-in" | "sign-up";
 
 export default function AuthPage() {
+  return (
+    <Suspense fallback={null}>
+      <AuthPageInner />
+    </Suspense>
+  );
+}
+
+function AuthPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setGuestMode, configured } = useAuth();
@@ -22,6 +30,20 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Surface OAuth callback failures so the user can see what went wrong.
+  const oauthError = searchParams.get("error");
+  const oauthMessage = searchParams.get("message");
+  useEffect(() => {
+    if (oauthError) {
+      toast.error(
+        oauthMessage
+          ? `Sign-in failed: ${oauthMessage}`
+          : `Sign-in failed: ${oauthError}`,
+        { duration: 8000 },
+      );
+    }
+  }, [oauthError, oauthMessage]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,6 +159,21 @@ export default function AuthPage() {
                 <div>
                   <strong>Supabase isn&apos;t configured yet.</strong> Sign-in is disabled until
                   env vars are set. You can still continue as guest below.
+                </div>
+              </div>
+            )}
+
+            {oauthError && (
+              <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 flex gap-3 text-sm text-red-900">
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <strong className="block mb-0.5">Sign-in failed</strong>
+                  <p className="text-red-800 break-words">
+                    {oauthMessage ?? oauthError}
+                  </p>
+                  <p className="text-[11px] text-red-700/80 mt-1.5 font-mono">
+                    {oauthError}
+                  </p>
                 </div>
               </div>
             )}
