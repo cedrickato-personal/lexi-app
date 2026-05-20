@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, Trash2 } from "lucide-react";
 import { Nav } from "@/components/nav";
 import { ProfileForm, type ProfileDraft } from "@/components/profile-form";
+import { SignedInBanner } from "@/components/signed-in-banner";
 import { clearProfile, getProfile, saveProfile } from "@/lib/storage";
 import { pushProfile } from "@/lib/storage-sync";
 import { useAuth } from "@/components/auth-provider";
@@ -77,7 +78,8 @@ export default function ProfilePage() {
     <>
       <Nav />
       <main className="min-h-[calc(100vh-3.5rem)]">
-        <div className="max-w-4xl mx-auto px-6 pt-12 pb-32">
+        <div className="max-w-4xl mx-auto px-6 pt-10 pb-32">
+          <SignedInBanner />
           <p className="text-xs uppercase tracking-[0.22em] text-orange-800/80 font-medium mb-4 flex items-center gap-2">
             <span className="inline-block w-8 h-px bg-orange-700/60" />
             Your Profile

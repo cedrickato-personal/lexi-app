@@ -17,9 +17,15 @@ export function UserMenu() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  if (loading) {
+  // Only show the spinner if we genuinely have nothing to render yet
+  // (no cached user AND no guest mode). Once either is known we paint
+  // immediately, even if background validation is still pending.
+  if (loading && !user && mode === "anonymous") {
     return (
-      <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center">
+      <div
+        className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center"
+        title="Loading session…"
+      >
         <Loader2 className="w-3.5 h-3.5 text-stone-400 animate-spin" />
       </div>
     );

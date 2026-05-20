@@ -57,19 +57,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     const supabase = createClient();
 
-    // Initial load — always release the loading state, even on error,
-    // so the UI never gets stuck on the splash screen.
+    // Phase 1: fast initial paint from cached session (no network call).
+    // getSession reads from local storage / cookies and resolves instantly,
+    // so the nav and gate aren't stuck on a spinner waiting for the network.
     supabase.auth
-      .getUser()
-      .then(({ data, error }) => {
-        if (error) console.warn("[auth] getUser error:", error.message);
-        setUser(data.user ?? null);
+      .getSession()
+      .then(({ data }) => {
+        setUser(data.session?.user ?? null);
       })
       .catch((err) => {
-        console.error("[auth] getUser threw:", err);
+        console.error("[auth] getSession threw:", err);
       })
       .finally(() => {
         setLoading(false);
+      });
+
+    // Phase 2: validate in background. Refreshes user info if the token rotated.
+    supabase.auth
+      .getUser()
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn("[auth] getUser error:", error.message);
+          return; // don't clobber the cached user for transient errors
+        }
+        setUser(data.user ?? null);
+      })
+      .catch((err) => {
+        console.warn("[auth] getUser threw:", err);
       });
 
     // Subscribe to auth changes — sync localStorage <-> Supabase on sign-in

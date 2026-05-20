@@ -8,6 +8,7 @@ import { saveProfile, setOnboardingResolved } from "@/lib/storage";
 import { pushProfile } from "@/lib/storage-sync";
 import { Nav } from "@/components/nav";
 import { ProfileForm, type ProfileDraft } from "@/components/profile-form";
+import { SignedInBanner } from "@/components/signed-in-banner";
 import { useAuth } from "@/components/auth-provider";
 import type { LearnerProfile } from "@/lib/types";
 import { toast } from "sonner";
@@ -90,7 +91,8 @@ export default function OnboardingPage() {
 
 function WelcomeStep({ onContinue, onSkip }: { onContinue: () => void; onSkip: () => void }) {
   return (
-    <div className="max-w-3xl mx-auto px-6 pt-16 pb-24">
+    <div className="max-w-3xl mx-auto px-6 pt-10 pb-24">
+      <SignedInBanner />
       <p className="text-xs uppercase tracking-[0.22em] text-orange-800/80 font-medium mb-5 flex items-center gap-2">
         <span className="inline-block w-8 h-px bg-orange-700/60" />
         Welcome to Lexi
@@ -187,7 +189,8 @@ function ProfileStep({
   onSkip: () => void;
 }) {
   return (
-    <div className="max-w-4xl mx-auto px-6 pt-12 pb-24">
+    <div className="max-w-4xl mx-auto px-6 pt-10 pb-24">
+      <SignedInBanner />
       <button
         onClick={onBack}
         className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-orange-800 transition-colors mb-6"
