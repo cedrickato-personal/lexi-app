@@ -33,12 +33,15 @@ makes `cedric.g.kato@gmail.com` an admin automatically.
 
 ### Step 3 · Mark Marcel as admin
 
-In Supabase → **SQL Editor**, run:
+In Supabase → **SQL Editor**, run (joins to `auth.users` so it works even if
+`profiles.email` is blank):
 
 ```sql
-update public.profiles
+update public.profiles p
   set role = 'admin'
-  where email = 'marcel@heylexi.app';
+  from auth.users u
+  where p.user_id = u.id
+    and u.email = 'marcel@heylexi.app';
 ```
 
 You should see `UPDATE 1`. If you see `UPDATE 0`, his profile row doesn't exist

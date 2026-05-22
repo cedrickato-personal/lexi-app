@@ -89,11 +89,18 @@ create policy "Authenticated can insert audit rows"
   with check (auth.uid() = user_id);
 
 -- 4. Seed admins --------------------------------------------------------------
--- Mark the founder account as admin. (Marcel is added the same way once his
--- account exists — see ADMIN_GUIDE.md.)
-update public.profiles
+-- Mark the founder account as admin. We join to auth.users (the source of
+-- truth for email) rather than relying on profiles.email being populated,
+-- which the signup trigger doesn't always set for OAuth users.
+update public.profiles p
   set role = 'admin'
-  where email = 'cedric.g.kato@gmail.com';
+  from auth.users u
+  where p.user_id = u.id
+    and u.email = 'cedric.g.kato@gmail.com';
 
--- If the profile row doesn't exist yet (rare — only if the trigger hasn't run),
--- this no-ops; re-run after the account's first sign-in.
+-- Add Marcel the same way once his account exists (see ADMIN_GUIDE.md):
+-- update public.profiles p set role = 'admin'
+--   from auth.users u where p.user_id = u.id and u.email = 'marcel@heylexi.app';
+
+-- If this matches 0 rows, the account hasn't signed in yet (no profile row).
+-- Sign in once, then re-run this UPDATE.
