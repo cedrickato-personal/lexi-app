@@ -75,20 +75,33 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
 
     let cancelled = false;
     setLessonLoading(true);
+    // Failsafe: never let the loading state hang the UI.
+    const safety = setTimeout(() => {
+      if (!cancelled) {
+        console.warn("[lesson] fetch timed out — showing fallback");
+        setLessonLoading(false);
+      }
+    }, 8000);
+
     fetchSharedLesson(langCode, weekNumber)
       .then((saved) => {
-        if (cancelled) return;
-        setLesson(saved);
-        // Admins default to the generate tab on empty weeks; everyone else to lesson.
-        setActiveTab(saved ? "lesson" : isAdmin ? "generate" : "lesson");
+        if (!cancelled) setLesson(saved);
+      })
+      .catch((err) => {
+        console.error("[lesson] fetch failed:", err);
       })
       .finally(() => {
         if (!cancelled) setLessonLoading(false);
+        clearTimeout(safety);
       });
+
     return () => {
       cancelled = true;
+      clearTimeout(safety);
     };
-  }, [langCode, weekNumber, lang, curriculum, refreshKey, router, isAdmin]);
+    // Intentionally NOT depending on isAdmin: auth resolving shouldn't cancel
+    // and restart the lesson fetch (that was leaving loading stuck).
+  }, [langCode, weekNumber, lang, curriculum, refreshKey, router]);
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 

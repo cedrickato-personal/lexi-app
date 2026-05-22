@@ -39,34 +39,54 @@ export async function fetchSharedLesson(
         }
       : null;
   }
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("shared_lessons")
-    .select("*")
-    .eq("lang_code", langCode)
-    .eq("week_number", weekNumber)
-    .maybeSingle();
-  if (error || !data) return null;
-  return {
-    langCode: data.lang_code,
-    weekNumber: data.week_number,
-    content: data.content,
-    updatedAt: data.updated_at,
-    updatedBy: data.updated_by,
-  };
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("shared_lessons")
+      .select("*")
+      .eq("lang_code", langCode)
+      .eq("week_number", weekNumber)
+      .limit(1);
+    if (error) {
+      if (/does not exist|schema cache/i.test(error.message)) {
+        console.warn(
+          "[lessons] shared_lessons table not found — run supabase/migration-002-shared-lessons.sql",
+        );
+      } else {
+        console.warn("[lessons] fetchSharedLesson error:", error.message);
+      }
+      return null;
+    }
+    const row = data?.[0];
+    if (!row) return null;
+    return {
+      langCode: row.lang_code,
+      weekNumber: row.week_number,
+      content: row.content,
+      updatedAt: row.updated_at,
+      updatedBy: row.updated_by,
+    };
+  } catch (err) {
+    console.error("[lessons] fetchSharedLesson threw:", err);
+    return null;
+  }
 }
 
 export async function fetchAvailableWeeks(langCode: string): Promise<Set<number>> {
   if (!isSupabaseConfigured()) {
     return new Set(Object.keys(getAllLocalLessons(langCode)).map(Number));
   }
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("shared_lessons")
-    .select("week_number")
-    .eq("lang_code", langCode);
-  if (error || !data) return new Set();
-  return new Set(data.map((r) => r.week_number as number));
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("shared_lessons")
+      .select("week_number")
+      .eq("lang_code", langCode);
+    if (error || !data) return new Set();
+    return new Set(data.map((r) => r.week_number as number));
+  } catch {
+    return new Set();
+  }
 }
 
 /** One query: how many shared lessons exist per language. */
@@ -80,14 +100,18 @@ export async function fetchAllAvailableCounts(): Promise<Record<string, number>>
     }
     return out;
   }
-  const supabase = createClient();
-  const { data, error } = await supabase.from("shared_lessons").select("lang_code");
-  if (error || !data) return out;
-  for (const row of data) {
-    const code = row.lang_code as string;
-    out[code] = (out[code] ?? 0) + 1;
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase.from("shared_lessons").select("lang_code");
+    if (error || !data) return out;
+    for (const row of data) {
+      const code = row.lang_code as string;
+      out[code] = (out[code] ?? 0) + 1;
+    }
+    return out;
+  } catch {
+    return out;
   }
-  return out;
 }
 
 // ────────── Writes (admins only — RLS also enforces this server-side) ──────────
