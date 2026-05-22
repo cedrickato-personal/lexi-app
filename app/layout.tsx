@@ -17,6 +17,7 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import { OnboardingGate } from "@/components/onboarding-gate";
 import { AuthProvider } from "@/components/auth-provider";
+import { FeedbackWidget } from "@/components/feedback-widget";
 
 const fontSans = Geist({ variable: "--font-sans", subsets: ["latin"], display: "swap" });
 const fontMono = Geist_Mono({ variable: "--font-mono", subsets: ["latin"], display: "swap" });
@@ -66,6 +67,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="fixed inset-0 -z-10 bg-gradient-to-b from-[#FAF8F3] via-[#FAF8F3] to-[#F5F0E8] pointer-events-none" />
         <AuthProvider>
           <OnboardingGate>{children}</OnboardingGate>
+          <FeedbackWidget />
         </AuthProvider>
         <Toaster position="bottom-right" richColors />
       </body>

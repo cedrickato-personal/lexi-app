@@ -40,19 +40,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<string | null>(null);
   const configured = isSupabaseConfigured();
 
-  // Fetch the signed-in user's role from their profile row.
+  // Determine the signed-in user's role. We prefer the is_admin() database
+  // function (SECURITY DEFINER — bypasses profiles RLS, so it's authoritative
+  // even if the profiles SELECT policy is misconfigured). Fall back to reading
+  // profiles.role directly.
   const fetchRole = useCallback(
     async (userId: string) => {
       if (!configured) return;
       try {
         const supabase = createClient();
-        const { data } = await supabase
+        const { data: adminFlag, error: rpcError } = await supabase.rpc("is_admin");
+        if (!rpcError && typeof adminFlag === "boolean") {
+          console.log("[auth] is_admin() →", adminFlag);
+          setRole(adminFlag ? "admin" : "user");
+          return;
+        }
+        // Fallback: direct read
+        const { data, error } = await supabase
           .from("profiles")
           .select("role")
           .eq("user_id", userId)
           .maybeSingle();
+        console.log(
+          "[auth] role fallback → profiles.role =",
+          data?.role,
+          rpcError ? `(rpc err: ${rpcError.message})` : "",
+          error ? `(select err: ${error.message})` : "",
+        );
         setRole((data?.role as string | undefined) ?? "user");
-      } catch {
+      } catch (err) {
+        console.warn("[auth] fetchRole threw:", err);
         setRole("user");
       }
     },
