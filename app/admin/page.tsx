@@ -3,11 +3,19 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ShieldCheck, RefreshCw, FileText, Plus, Pencil, Trash2 } from "lucide-react";
+import { ShieldCheck, RefreshCw, FileText, Plus, Pencil, Trash2, UploadCloud } from "lucide-react";
 import { Nav } from "@/components/nav";
 import { useAuth } from "@/components/auth-provider";
-import { fetchAuditLog, fetchAllAvailableCounts, type AuditEntry } from "@/lib/lessons";
+import {
+  fetchAuditLog,
+  fetchAllAvailableCounts,
+  getLocalLessonsForImport,
+  importLocalLessonsToShared,
+  type AuditEntry,
+  type LocalLessonToImport,
+} from "@/lib/lessons";
 import { LANGUAGES } from "@/lib/languages";
+import { toast } from "sonner";
 
 const ACTION_META: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
   "lesson.create": { label: "Published", icon: Plus, cls: "text-emerald-700 bg-emerald-50" },
@@ -28,10 +36,12 @@ function timeAgo(iso: string): string {
 
 export default function AdminPage() {
   const router = useRouter();
-  const { isAdmin, loading, mode } = useAuth();
+  const { user, isAdmin, loading, mode } = useAuth();
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [fetching, setFetching] = useState(true);
+  const [localLessons, setLocalLessons] = useState<LocalLessonToImport[]>([]);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -49,12 +59,29 @@ export default function AdminPage() {
 
   const load = () => {
     setFetching(true);
+    setLocalLessons(getLocalLessonsForImport());
     Promise.all([fetchAuditLog(300), fetchAllAvailableCounts()])
       .then(([log, c]) => {
         setEntries(log);
         setCounts(c);
       })
       .finally(() => setFetching(false));
+  };
+
+  const handleImport = async () => {
+    setImporting(true);
+    const result = await importLocalLessonsToShared(user);
+    setImporting(false);
+    if (result.imported > 0) {
+      toast.success(`Published ${result.imported} lesson${result.imported === 1 ? "" : "s"} from this browser`);
+    }
+    if (result.failed > 0) {
+      toast.error(`${result.failed} failed${result.errors.length ? `: ${result.errors[0]}` : ""}`);
+    }
+    if (result.imported === 0 && result.failed === 0) {
+      toast.info("No local lessons found in this browser");
+    }
+    load();
   };
 
   if (loading || !isAdmin) return null;
@@ -106,6 +133,51 @@ export default function AdminPage() {
               </p>
             </div>
           </div>
+
+          {/* Recover from this browser */}
+          {localLessons.length > 0 && (
+            <div className="bg-white rounded-xl border border-orange-200 shadow-sm p-6 mb-10">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg bg-orange-50 text-orange-700 flex items-center justify-center shrink-0">
+                  <UploadCloud className="w-5 h-5" strokeWidth={1.5} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-display text-lg font-semibold text-stone-900 tracking-tight mb-1">
+                    Recover lessons from this browser
+                  </h3>
+                  <p className="text-sm text-stone-600 leading-relaxed mb-4 max-w-xl">
+                    Found <strong>{localLessons.length}</strong> lesson
+                    {localLessons.length === 1 ? "" : "s"} saved locally on this device under
+                    the old per-user model. Publish them to the shared library so everyone sees them.
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {localLessons.slice(0, 8).map((l) => (
+                      <span
+                        key={`${l.langCode}-${l.weekNumber}`}
+                        className="text-xs px-2 py-0.5 rounded border border-stone-200 bg-stone-50 text-stone-600"
+                      >
+                        {LANGUAGES[l.langCode]?.name ?? l.langCode} · W{l.weekNumber}
+                        <span className="text-stone-400"> · {l.chars.toLocaleString()}c</span>
+                      </span>
+                    ))}
+                    {localLessons.length > 8 && (
+                      <span className="text-xs px-2 py-0.5 text-stone-400">
+                        +{localLessons.length - 8} more
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleImport}
+                    disabled={importing}
+                    className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md text-sm font-medium bg-stone-900 hover:bg-stone-800 text-white disabled:bg-stone-200 disabled:text-stone-400"
+                  >
+                    <UploadCloud className="w-4 h-4" />
+                    {importing ? "Publishing…" : `Publish ${localLessons.length} to shared library`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Audit log */}
           <h2 className="font-display text-lg font-semibold text-stone-900 mb-4">

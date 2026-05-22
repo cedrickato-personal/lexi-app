@@ -228,6 +228,55 @@ export interface AuditEntry {
   createdAt: string;
 }
 
+// ────────── Recover lessons saved locally (old per-user model) ──────────
+
+export interface LocalLessonToImport {
+  langCode: string;
+  weekNumber: number;
+  content: string;
+  chars: number;
+}
+
+/** Enumerate lessons sitting in this browser's localStorage across all languages. */
+export function getLocalLessonsForImport(): LocalLessonToImport[] {
+  const out: LocalLessonToImport[] = [];
+  for (const code of Object.keys(LANGUAGES)) {
+    const lessons = getAllLocalLessons(code);
+    for (const [week, lesson] of Object.entries(lessons)) {
+      if (lesson?.content) {
+        out.push({
+          langCode: code,
+          weekNumber: Number(week),
+          content: lesson.content,
+          chars: lesson.content.length,
+        });
+      }
+    }
+  }
+  return out.sort((a, b) =>
+    a.langCode === b.langCode ? a.weekNumber - b.weekNumber : a.langCode.localeCompare(b.langCode),
+  );
+}
+
+/** Publish all browser-local lessons to the shared library (admin only). */
+export async function importLocalLessonsToShared(
+  user: User | null,
+): Promise<{ imported: number; failed: number; errors: string[] }> {
+  const local = getLocalLessonsForImport();
+  let imported = 0;
+  let failed = 0;
+  const errors: string[] = [];
+  for (const l of local) {
+    const r = await saveSharedLesson(l.langCode, l.weekNumber, l.content, user);
+    if (r.ok) imported++;
+    else {
+      failed++;
+      if (r.error && !errors.includes(r.error)) errors.push(r.error);
+    }
+  }
+  return { imported, failed, errors };
+}
+
 export async function fetchAuditLog(limit = 200): Promise<AuditEntry[]> {
   if (!isSupabaseConfigured()) return [];
   const supabase = createClient();
