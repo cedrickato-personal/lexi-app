@@ -71,14 +71,19 @@ export function FeedbackWidget() {
 
   return (
     <>
-      {/* Right-edge vertical tab */}
+      {/* Right-edge vertical tab — icon upright on top, label reads downward */}
       <button
         onClick={() => setOpen(true)}
         aria-label="Send feedback"
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-center gap-1.5 bg-stone-900 hover:bg-orange-800 text-white text-xs font-medium pl-2.5 pr-2 py-3 rounded-l-lg shadow-lg transition-colors [writing-mode:vertical-rl] rotate-180"
+        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-2 bg-stone-900 hover:bg-orange-800 text-white px-2 py-4 rounded-l-lg shadow-lg transition-colors group"
       >
-        <MessageSquarePlus className="w-3.5 h-3.5 rotate-90" />
-        Feedback
+        <MessageSquarePlus className="w-4 h-4" />
+        <span
+          className="text-xs font-medium tracking-wide"
+          style={{ writingMode: "vertical-rl" }}
+        >
+          Feedback
+        </span>
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>

@@ -33,6 +33,16 @@ const AuthContext = createContext<AuthState>({
 
 const GUEST_KEY = "lexi:guest-mode";
 
+/** Reject after `ms` so a hung Supabase call can't stall the UI forever. */
+function withTimeout<T>(p: PromiseLike<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    Promise.resolve(p),
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms),
+    ),
+  ]);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,37 +50,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<string | null>(null);
   const configured = isSupabaseConfigured();
 
-  // Determine the signed-in user's role. We prefer the is_admin() database
-  // function (SECURITY DEFINER — bypasses profiles RLS, so it's authoritative
-  // even if the profiles SELECT policy is misconfigured). Fall back to reading
-  // profiles.role directly.
+  // Determine the signed-in user's role via the is_admin() database function
+  // (SECURITY DEFINER — bypasses profiles RLS, authoritative). Retries a couple
+  // times because a cold Supabase project can be slow on the first call.
   const fetchRole = useCallback(
     async (userId: string) => {
       if (!configured) return;
-      try {
-        const supabase = createClient();
-        const { data: adminFlag, error: rpcError } = await supabase.rpc("is_admin");
-        if (!rpcError && typeof adminFlag === "boolean") {
-          console.log("[auth] is_admin() →", adminFlag);
-          setRole(adminFlag ? "admin" : "user");
-          return;
+      const supabase = createClient();
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const { data, error } = await withTimeout(
+            supabase.rpc("is_admin"),
+            5000,
+            "is_admin",
+          );
+          if (error) {
+            console.warn(`[auth] is_admin attempt ${attempt} error:`, error.message);
+          } else if (typeof data === "boolean") {
+            console.log("[auth] is_admin() →", data);
+            setRole(data ? "admin" : "user");
+            return;
+          }
+        } catch (err) {
+          console.warn(`[auth] is_admin attempt ${attempt}:`, (err as Error).message);
         }
-        // Fallback: direct read
-        const { data, error } = await supabase
+        await new Promise((r) => setTimeout(r, 800 * attempt));
+      }
+      // Last resort: direct profiles read (works if RLS allows it).
+      try {
+        const { data } = await supabase
           .from("profiles")
           .select("role")
           .eq("user_id", userId)
           .maybeSingle();
-        console.log(
-          "[auth] role fallback → profiles.role =",
-          data?.role,
-          rpcError ? `(rpc err: ${rpcError.message})` : "",
-          error ? `(select err: ${error.message})` : "",
-        );
-        setRole((data?.role as string | undefined) ?? "user");
-      } catch (err) {
-        console.warn("[auth] fetchRole threw:", err);
-        setRole("user");
+        console.log("[auth] role via profiles fallback →", data?.role);
+        if (data?.role) setRole(data.role as string);
+      } catch {
+        /* leave role as-is rather than clobbering a known-admin on a fluke */
       }
     },
     [configured],
@@ -97,61 +113,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const supabase = createClient();
+    let roleFetchedFor: string | null = null;
+    let syncedFor: string | null = null;
 
-    // Phase 1: fast initial paint from cached session (no network call).
-    // getSession reads from local storage / cookies and resolves instantly,
-    // so the nav and gate aren't stuck on a spinner waiting for the network.
-    supabase.auth
-      .getSession()
-      .then(({ data }) => {
-        const u = data.session?.user ?? null;
-        setUser(u);
-        if (u) fetchRole(u.id);
-      })
-      .catch((err) => {
-        console.error("[auth] getSession threw:", err);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-
-    // Phase 2: validate in background. Refreshes user info if the token rotated.
-    supabase.auth
-      .getUser()
-      .then(({ data, error }) => {
-        if (error) {
-          console.warn("[auth] getUser error:", error.message);
-          return; // don't clobber the cached user for transient errors
+    const onUser = (u: User | null) => {
+      setUser(u);
+      if (u) {
+        // Role check is on the critical path (gates the admin UI) — run now.
+        if (roleFetchedFor !== u.id) {
+          roleFetchedFor = u.id;
+          fetchRole(u.id);
         }
-        setUser(data.user ?? null);
-      })
-      .catch((err) => {
-        console.warn("[auth] getUser threw:", err);
-      });
-
-    // Subscribe to auth changes — sync localStorage <-> Supabase on sign-in
-    let lastSyncedUserId: string | null = null;
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const nextUser = session?.user ?? null;
-      setUser(nextUser);
-      if (nextUser) fetchRole(nextUser.id);
-      else setRole(null);
-      if (
-        nextUser &&
-        (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") &&
-        nextUser.id !== lastSyncedUserId
-      ) {
-        lastSyncedUserId = nextUser.id;
-        try {
-          await syncOnSignIn(nextUser.id, {
-            email: nextUser.email,
-            full_name: (nextUser.user_metadata?.full_name as string | undefined) ?? null,
-            avatar_url: (nextUser.user_metadata?.avatar_url as string | undefined) ?? null,
-          });
-        } catch (err) {
-          console.error("Sync on sign-in failed:", err);
+        // Heavy cross-device sync is NOT critical — defer it so it doesn't
+        // contend with getSession/role for the auth Web Lock.
+        if (syncedFor !== u.id) {
+          syncedFor = u.id;
+          setTimeout(() => {
+            syncOnSignIn(u.id, {
+              email: u.email,
+              full_name: (u.user_metadata?.full_name as string | undefined) ?? null,
+              avatar_url: (u.user_metadata?.avatar_url as string | undefined) ?? null,
+            }).catch((err) => console.warn("[auth] background sync failed:", err));
+          }, 1500);
         }
+      } else {
+        setRole(null);
       }
+    };
+
+    // Fast path: read the cached session (local, no network). Releases loading.
+    withTimeout(supabase.auth.getSession(), 4000, "getSession")
+      .then(({ data }) => onUser(data.session?.user ?? null))
+      .catch((err) => console.warn("[auth]", (err as Error).message))
+      .finally(() => setLoading(false));
+
+    // Keep state fresh on sign-in / sign-out / token refresh.
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      onUser(session?.user ?? null);
+      setLoading(false);
     });
 
     return () => subscription.subscription.unsubscribe();
