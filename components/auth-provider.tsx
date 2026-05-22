@@ -12,6 +12,8 @@ interface AuthState {
   loading: boolean;
   mode: AuthMode;
   configured: boolean;
+  role: string | null;
+  isAdmin: boolean;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
   setGuestMode: () => void;
@@ -22,6 +24,8 @@ const AuthContext = createContext<AuthState>({
   loading: true,
   mode: "anonymous",
   configured: false,
+  role: null,
+  isAdmin: false,
   refresh: async () => {},
   signOut: async () => {},
   setGuestMode: () => {},
@@ -33,7 +37,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
   const configured = isSupabaseConfigured();
+
+  // Fetch the signed-in user's role from their profile row.
+  const fetchRole = useCallback(
+    async (userId: string) => {
+      if (!configured) return;
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("user_id", userId)
+          .maybeSingle();
+        setRole((data?.role as string | undefined) ?? "user");
+      } catch {
+        setRole("user");
+      }
+    },
+    [configured],
+  );
 
   const refresh = useCallback(async () => {
     if (!configured) {
@@ -63,7 +87,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth
       .getSession()
       .then(({ data }) => {
-        setUser(data.session?.user ?? null);
+        const u = data.session?.user ?? null;
+        setUser(u);
+        if (u) fetchRole(u.id);
       })
       .catch((err) => {
         console.error("[auth] getSession threw:", err);
@@ -91,6 +117,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: subscription } = supabase.auth.onAuthStateChange(async (event, session) => {
       const nextUser = session?.user ?? null;
       setUser(nextUser);
+      if (nextUser) fetchRole(nextUser.id);
+      else setRole(null);
       if (
         nextUser &&
         (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") &&
@@ -110,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.subscription.unsubscribe();
-  }, [configured]);
+  }, [configured, fetchRole]);
 
   const signOut = useCallback(async () => {
     if (configured) {
@@ -122,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setIsGuest(false);
     setUser(null);
+    setRole(null);
   }, [configured]);
 
   const setGuestMode = useCallback(() => {
@@ -132,9 +161,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const mode: AuthMode = user ? "authenticated" : isGuest ? "guest" : "anonymous";
+  const isAdmin = role === "admin";
 
   return (
-    <AuthContext.Provider value={{ user, loading, mode, configured, refresh, signOut, setGuestMode }}>
+    <AuthContext.Provider
+      value={{ user, loading, mode, configured, role, isAdmin, refresh, signOut, setGuestMode }}
+    >
       {children}
     </AuthContext.Provider>
   );

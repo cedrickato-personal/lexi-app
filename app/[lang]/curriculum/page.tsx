@@ -10,7 +10,8 @@ import { LevelSection } from "@/components/level-section";
 import { LANGUAGES } from "@/lib/languages";
 import { FAMILY_THEMES } from "@/lib/family-theme";
 import { getCurriculum } from "@/lib/curricula";
-import { getAllLessons, touchLanguage } from "@/lib/storage";
+import { touchLanguage } from "@/lib/storage";
+import { fetchAvailableWeeks } from "@/lib/lessons";
 import type { CEFRLevel } from "@/lib/types";
 
 const ALL_LEVELS: (CEFRLevel | "All")[] = ["All", "A1", "A2", "B1", "B2", "C1", "C2"];
@@ -43,10 +44,8 @@ export default function CurriculumPage({ params }: { params: Promise<{ lang: str
       return;
     }
     touchLanguage(langCode);
-    const lessons = getAllLessons(langCode);
-    setCompletedWeeks(new Set(Object.keys(lessons).map(Number)));
-    // notes are language-namespaced too — load from storage in a more direct way
-    // (we'd need a getAllNotes helper, but for now leave empty)
+    // "Available" weeks = those with a published shared lesson (same for everyone).
+    fetchAvailableWeeks(langCode).then(setCompletedWeeks);
   }, [langCode, lang, curriculum, router]);
 
   const filteredWeeks = useMemo(() => {

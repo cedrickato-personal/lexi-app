@@ -8,11 +8,8 @@ import { Nav } from "@/components/nav";
 import { LANGUAGES } from "@/lib/languages";
 import { FAMILY_THEMES } from "@/lib/family-theme";
 import { getCurriculum } from "@/lib/curricula";
-import {
-  getLanguageProgress,
-  getAllLessons,
-  touchLanguage,
-} from "@/lib/storage";
+import { touchLanguage } from "@/lib/storage";
+import { fetchAvailableWeeks } from "@/lib/lessons";
 
 export default function LangHomePage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: langCode } = use(params);
@@ -30,11 +27,13 @@ export default function LangHomePage({ params }: { params: Promise<{ lang: strin
       return;
     }
     touchLanguage(langCode);
-    setProgress(getLanguageProgress(langCode));
-    const lessons = getAllLessons(langCode);
-    const completed = new Set(Object.keys(lessons).map(Number));
-    const next = curriculum.weeks.find((w) => !completed.has(w.number));
-    setNextWeek(next?.number ?? 1);
+    fetchAvailableWeeks(langCode).then((available) => {
+      setProgress({ completed: available.size, total: lang.totalWeeks });
+      // "Next" = first week that has a published lesson but, failing that,
+      // just week 1 (so the CTA always goes somewhere useful).
+      const firstAvailable = curriculum.weeks.find((w) => available.has(w.number));
+      setNextWeek(firstAvailable?.number ?? 1);
+    });
   }, [langCode, lang, curriculum, router]);
 
   if (!lang || !curriculum || !theme) return null;
@@ -107,7 +106,7 @@ export default function LangHomePage({ params }: { params: Promise<{ lang: strin
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 p-8 pb-7">
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-stone-400 font-medium mb-3">
-                  Progress
+                  Lessons available
                 </p>
                 <div className="flex items-baseline gap-3">
                   <span className="font-display text-6xl md:text-7xl font-semibold text-stone-900 tabular-nums leading-none">
@@ -117,13 +116,13 @@ export default function LangHomePage({ params }: { params: Promise<{ lang: strin
                     / {progress.total}
                   </span>
                   <span className="text-sm text-stone-500 ml-2">
-                    lesson{progress.completed === 1 ? "" : "s"} saved
+                    week{progress.completed === 1 ? "" : "s"} ready
                   </span>
                 </div>
                 <p className="text-sm text-stone-500 mt-3 max-w-md">
                   {progress.completed === 0
-                    ? `Start with Week 1: ${curriculum.weeks[0]?.title}`
-                    : `Up next: Week ${nextWeek} · ${curriculum.weeks.find((w) => w.number === nextWeek)?.title ?? ""}`}
+                    ? `No lessons published yet for ${lang.name}. Start with Week 1: ${curriculum.weeks[0]?.title}`
+                    : `Jump in at Week ${nextWeek} · ${curriculum.weeks.find((w) => w.number === nextWeek)?.title ?? ""}`}
                 </p>
               </div>
               <Link
@@ -131,7 +130,7 @@ export default function LangHomePage({ params }: { params: Promise<{ lang: strin
                 className="inline-flex items-center gap-2 rounded-lg h-10 px-5 text-sm font-medium text-white shadow-sm shrink-0 transition-colors"
                 style={{ backgroundColor: theme.accentHex }}
               >
-                {progress.completed === 0 ? "Start Week 1" : `Continue · Week ${nextWeek}`}
+                {progress.completed === 0 ? "Go to Week 1" : `Start · Week ${nextWeek}`}
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>

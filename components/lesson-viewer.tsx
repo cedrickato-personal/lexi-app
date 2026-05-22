@@ -14,19 +14,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { deleteLesson, saveLesson } from "@/lib/storage";
-import { pushLesson, deleteLessonCloud } from "@/lib/storage-sync";
+import { saveSharedLesson, deleteSharedLesson, type SharedLesson } from "@/lib/lessons";
 import { useAuth } from "@/components/auth-provider";
-import type { SavedLesson } from "@/lib/storage";
 import type { Week } from "@/lib/types";
 import type { LanguageMeta } from "@/lib/languages";
 import { FAMILY_THEMES } from "@/lib/family-theme";
 import { toast } from "sonner";
 
 interface LessonViewerProps {
-  lesson: SavedLesson;
+  lesson: SharedLesson;
   week: Week;
   lang: LanguageMeta;
+  isAdmin?: boolean;
   onDeleted: () => void;
   onRegenerate: () => void;
   onUpdated: () => void;
@@ -36,6 +35,7 @@ export function LessonViewer({
   lesson,
   week,
   lang,
+  isAdmin = false,
   onDeleted,
   onRegenerate,
   onUpdated,
@@ -79,29 +79,35 @@ export function LessonViewer({
     URL.revokeObjectURL(url);
   }, [lang, lesson, week, filename]);
 
-  const handleEdit = useCallback(() => {
+  const handleEdit = useCallback(async () => {
     const content = editContent.trim();
-    saveLesson(lang.code, week.number, content);
-    if (user) pushLesson(user.id, lang.code, week.number, content).catch(() => {});
-    toast.success("Lesson updated");
+    const result = await saveSharedLesson(lang.code, week.number, content, user);
+    if (!result.ok) {
+      toast.error(result.error ?? "Couldn't save");
+      return;
+    }
+    toast.success("Lesson updated for everyone");
     setEditOpen(false);
     onUpdated();
   }, [lang.code, week.number, editContent, onUpdated, user]);
 
-  const handleDelete = useCallback(() => {
-    deleteLesson(lang.code, week.number);
-    if (user) deleteLessonCloud(user.id, lang.code, week.number).catch(() => {});
+  const handleDelete = useCallback(async () => {
+    const result = await deleteSharedLesson(lang.code, week.number, user);
+    if (!result.ok) {
+      toast.error(result.error ?? "Couldn't delete");
+      return;
+    }
     toast.success("Lesson deleted");
     setDeleteOpen(false);
     onDeleted();
   }, [lang.code, week.number, onDeleted, user]);
 
   const handleRegen = useCallback(() => {
-    deleteLesson(lang.code, week.number);
-    if (user) deleteLessonCloud(user.id, lang.code, week.number).catch(() => {});
+    // Don't delete yet — just open the generator pre-filled. Publishing there
+    // overwrites the live lesson. This avoids leaving a gap if they cancel.
     setRegenOpen(false);
     onRegenerate();
-  }, [lang.code, week.number, onRegenerate, user]);
+  }, [onRegenerate]);
 
   return (
     <div>
@@ -110,23 +116,28 @@ export function LessonViewer({
           {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
           {copied ? "Copied" : "Copy"}
         </button>
-        <button onClick={() => { setEditContent(lesson.content); setEditOpen(true); }} className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-stone-700 hover:bg-stone-100 transition-colors">
-          <Edit2 className="w-3.5 h-3.5" /> Edit
-        </button>
-        <span className="w-px h-5 bg-stone-200 mx-1" />
         <button onClick={downloadMd} className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-stone-700 hover:bg-stone-100 transition-colors">
           <Download className="w-3.5 h-3.5" /> Markdown
         </button>
         <button onClick={downloadJson} className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-stone-700 hover:bg-stone-100 transition-colors">
           <Download className="w-3.5 h-3.5" /> JSON
         </button>
-        <span className="w-px h-5 bg-stone-200 mx-1" />
-        <button onClick={() => setRegenOpen(true)} className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-orange-800 hover:bg-orange-50 transition-colors">
-          <RefreshCw className="w-3.5 h-3.5" /> Regenerate
-        </button>
-        <button onClick={() => setDeleteOpen(true)} className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-red-600 hover:bg-red-50 transition-colors ml-auto">
-          <Trash2 className="w-3.5 h-3.5" /> Delete
-        </button>
+
+        {isAdmin && (
+          <>
+            <span className="w-px h-5 bg-stone-200 mx-1" />
+            <span className="text-[10px] font-mono uppercase tracking-widest text-stone-400 px-1">Admin</span>
+            <button onClick={() => { setEditContent(lesson.content); setEditOpen(true); }} className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-stone-700 hover:bg-stone-100 transition-colors">
+              <Edit2 className="w-3.5 h-3.5" /> Edit
+            </button>
+            <button onClick={() => setRegenOpen(true)} className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-orange-800 hover:bg-orange-50 transition-colors">
+              <RefreshCw className="w-3.5 h-3.5" /> Regenerate
+            </button>
+            <button onClick={() => setDeleteOpen(true)} className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-red-600 hover:bg-red-50 transition-colors ml-auto">
+              <Trash2 className="w-3.5 h-3.5" /> Delete
+            </button>
+          </>
+        )}
       </div>
 
       <article className="bg-white rounded-2xl border border-stone-200/70 shadow-sm p-8 md:p-12">

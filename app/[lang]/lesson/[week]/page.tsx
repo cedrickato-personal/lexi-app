@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ChevronLeft, ChevronRight, Sparkles, FileText, BookOpen, Wand2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, FileText, BookOpen, Wand2, Lock, Clock } from "lucide-react";
 import { TableOfContents, useMarkdownToc, type TocItem } from "@/components/table-of-contents";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,19 +17,18 @@ import { LANGUAGES } from "@/lib/languages";
 import { FAMILY_THEMES } from "@/lib/family-theme";
 import { getCurriculum } from "@/lib/curricula";
 import {
-  getLesson,
   getNote,
   saveNote,
   touchLanguage,
 } from "@/lib/storage";
 import { pushNote } from "@/lib/storage-sync";
+import { fetchSharedLesson, type SharedLesson } from "@/lib/lessons";
 import { useAuth } from "@/components/auth-provider";
 import {
   getLanguageReference,
   getLanguageAddendum,
   pedagogyFoundations,
 } from "@/lib/references";
-import type { SavedLesson } from "@/lib/storage";
 import type { Week, CEFRLevel } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -51,13 +50,14 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
   const curriculum = lang ? getCurriculum(langCode) : null;
   const theme = lang ? FAMILY_THEMES[lang.family] : null;
 
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [week, setWeek] = useState<Week | null>(null);
-  const [lesson, setLesson] = useState<SavedLesson | null>(null);
+  const [lesson, setLesson] = useState<SharedLesson | null>(null);
+  const [lessonLoading, setLessonLoading] = useState(true);
   const [note, setNote] = useState("");
   const [noteSaved, setNoteSaved] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState<string>("generate");
+  const [activeTab, setActiveTab] = useState<string>("lesson");
 
   useEffect(() => {
     if (!lang || !curriculum) {
@@ -70,12 +70,25 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
       return;
     }
     setWeek(w);
-    const saved = getLesson(langCode, weekNumber);
-    setLesson(saved);
     setNote(getNote(langCode, weekNumber));
-    setActiveTab(saved ? "lesson" : "generate");
     touchLanguage(langCode);
-  }, [langCode, weekNumber, lang, curriculum, refreshKey, router]);
+
+    let cancelled = false;
+    setLessonLoading(true);
+    fetchSharedLesson(langCode, weekNumber)
+      .then((saved) => {
+        if (cancelled) return;
+        setLesson(saved);
+        // Admins default to the generate tab on empty weeks; everyone else to lesson.
+        setActiveTab(saved ? "lesson" : isAdmin ? "generate" : "lesson");
+      })
+      .finally(() => {
+        if (!cancelled) setLessonLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [langCode, weekNumber, lang, curriculum, refreshKey, router, isAdmin]);
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
@@ -92,14 +105,15 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
     toast.success("Notes saved");
   }, [langCode, week, note, user]);
 
-  // TOC: lesson content sections (when a lesson is saved)
-  const lessonToc = useMarkdownToc(lesson?.content ?? "", false);
+  // TOC: lesson content sections (when a lesson is saved). Lesson sections use
+  // h3 (### N. Section) so we must include h3 headings.
+  const lessonToc = useMarkdownToc(lesson?.content ?? "", true);
 
   const tocItems: TocItem[] = useMemo(() => {
     const baseItems: TocItem[] = [
       { id: "week-spec", label: "Week spec", level: 1 },
     ];
-    if (activeTab === "generate" || activeTab === "regenerate") {
+    if (activeTab === "generate") {
       return [
         ...baseItems,
         { id: "step-01", label: "1. Copy the prompt", level: 1 },
@@ -139,18 +153,54 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
       <main className="min-h-[calc(100vh-3.5rem)]">
         <div className="max-w-6xl mx-auto px-6 py-10 lg:grid lg:grid-cols-[1fr_220px] lg:gap-x-12">
           <div className="min-w-0">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-1.5 text-xs text-stone-500 mb-8 font-mono">
-            <Link href="/" className="hover:text-orange-800 transition-colors">all</Link>
-            <span className="text-stone-300">/</span>
-            <Link href={`/${langCode}`} className="hover:text-orange-800 transition-colors">{langCode}</Link>
-            <span className="text-stone-300">/</span>
-            <Link href={`/${langCode}/curriculum`} className="hover:text-orange-800 transition-colors">
-              curriculum
-            </Link>
-            <span className="text-stone-300">/</span>
-            <span className="text-stone-900">week {week.number.toString().padStart(3, "0")}</span>
-          </nav>
+          {/* Breadcrumb + week pager */}
+          <div className="flex items-center justify-between gap-4 mb-8">
+            <nav className="flex items-center gap-1.5 text-xs text-stone-500 font-mono min-w-0">
+              <Link href="/" className="hover:text-orange-800 transition-colors">all</Link>
+              <span className="text-stone-300">/</span>
+              <Link href={`/${langCode}`} className="hover:text-orange-800 transition-colors">{langCode}</Link>
+              <span className="text-stone-300">/</span>
+              <Link href={`/${langCode}/curriculum`} className="hover:text-orange-800 transition-colors">
+                curriculum
+              </Link>
+              <span className="text-stone-300">/</span>
+              <span className="text-stone-900">week {week.number.toString().padStart(3, "0")}</span>
+            </nav>
+
+            <div className="flex items-center gap-1 shrink-0">
+              {prev ? (
+                <Link
+                  href={`/${langCode}/lesson/${prev}`}
+                  className="inline-flex items-center gap-1 h-8 pl-2 pr-3 rounded-md text-xs font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                  title={`Week ${prev}`}
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  Prev
+                </Link>
+              ) : (
+                <span className="inline-flex items-center gap-1 h-8 pl-2 pr-3 rounded-md text-xs font-medium text-stone-300 cursor-not-allowed">
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  Prev
+                </span>
+              )}
+              <span className="text-stone-200">|</span>
+              {next ? (
+                <Link
+                  href={`/${langCode}/lesson/${next}`}
+                  className="inline-flex items-center gap-1 h-8 pl-3 pr-2 rounded-md text-xs font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                  title={`Week ${next}`}
+                >
+                  Next
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              ) : (
+                <span className="inline-flex items-center gap-1 h-8 pl-3 pr-2 rounded-md text-xs font-medium text-stone-300 cursor-not-allowed">
+                  Next
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </span>
+              )}
+            </div>
+          </div>
 
           {/* Header */}
           <div className="mb-10">
@@ -248,18 +298,12 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
             <TabsList className="bg-stone-100/80 mb-6">
-              {lesson ? (
-                <>
-                  <TabsTrigger value="lesson" className="gap-1.5">
-                    <BookOpen className="w-3.5 h-3.5" /> Lesson
-                  </TabsTrigger>
-                  <TabsTrigger value="regenerate" className="gap-1.5">
-                    <Wand2 className="w-3.5 h-3.5" /> Regenerate
-                  </TabsTrigger>
-                </>
-              ) : (
+              <TabsTrigger value="lesson" className="gap-1.5">
+                <BookOpen className="w-3.5 h-3.5" /> Lesson
+              </TabsTrigger>
+              {isAdmin && (
                 <TabsTrigger value="generate" className="gap-1.5">
-                  <Wand2 className="w-3.5 h-3.5" /> Generate
+                  <Wand2 className="w-3.5 h-3.5" /> {lesson ? "Regenerate" : "Generate"}
                 </TabsTrigger>
               )}
               <TabsTrigger value="notes" className="gap-1.5">
@@ -272,35 +316,65 @@ export default function LessonPage({ params }: { params: Promise<{ lang: string;
               </TabsTrigger>
             </TabsList>
 
-            {lesson ? (
-              <>
-                <TabsContent value="lesson">
-                  <LessonViewer
-                    lesson={lesson}
-                    week={week}
-                    lang={lang}
-                    onDeleted={refresh}
-                    onRegenerate={() => { refresh(); setActiveTab("generate"); }}
-                    onUpdated={refresh}
-                  />
-                </TabsContent>
-                <TabsContent value="regenerate">
-                  <div className="mb-6 p-4 rounded-lg bg-orange-50/60 border border-orange-100 text-sm text-stone-700">
-                    <strong className="text-orange-900">Heads up:</strong> regenerating will overwrite your saved lesson. Your notes will stay.
-                  </div>
-                  <LessonGenerator
-                    langCode={langCode}
-                    weekNumber={weekNumber}
-                    initialContent={lesson.content}
-                    onSaved={refresh}
-                  />
-                </TabsContent>
-              </>
-            ) : (
+            {/* LESSON tab — everyone */}
+            <TabsContent value="lesson">
+              {lessonLoading ? (
+                <div className="bg-white rounded-2xl border border-stone-200/70 shadow-sm p-12 text-center">
+                  <div className="font-display text-lg text-stone-300 animate-pulse">Loading lesson…</div>
+                </div>
+              ) : lesson ? (
+                <LessonViewer
+                  lesson={lesson}
+                  week={week}
+                  lang={lang}
+                  isAdmin={isAdmin}
+                  onDeleted={refresh}
+                  onRegenerate={() => { refresh(); setActiveTab("generate"); }}
+                  onUpdated={refresh}
+                />
+              ) : (
+                <div className="bg-white rounded-2xl border border-stone-200/70 shadow-sm p-12 text-center">
+                  <Clock className="w-8 h-8 text-stone-300 mx-auto mb-4" />
+                  <h3 className="font-display text-xl font-semibold text-stone-900 mb-2">
+                    This lesson isn&apos;t ready yet
+                  </h3>
+                  <p className="text-sm text-stone-500 max-w-md mx-auto leading-relaxed">
+                    {isAdmin
+                      ? "No lesson has been published for this week. Use the Generate tab to create and publish one."
+                      : "The team is still building out this week. Check back soon — or explore weeks that are already available."}
+                  </p>
+                  {isAdmin ? (
+                    <button
+                      onClick={() => setActiveTab("generate")}
+                      className="mt-5 inline-flex items-center gap-1.5 h-9 px-4 rounded-md text-sm font-medium bg-stone-900 hover:bg-stone-800 text-white"
+                    >
+                      <Wand2 className="w-3.5 h-3.5" />
+                      Generate this lesson
+                    </button>
+                  ) : (
+                    <Link
+                      href={`/${langCode}/curriculum`}
+                      className="mt-5 inline-flex items-center gap-1.5 h-9 px-4 rounded-md text-sm font-medium border border-stone-300 hover:bg-stone-50 text-stone-700"
+                    >
+                      Browse available weeks
+                    </Link>
+                  )}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* GENERATE/REGENERATE tab — admins only */}
+            {isAdmin && (
               <TabsContent value="generate">
+                {lesson && (
+                  <div className="mb-6 p-4 rounded-lg bg-orange-50/60 border border-orange-100 text-sm text-stone-700">
+                    <strong className="text-orange-900">Heads up:</strong> publishing here overwrites the live lesson for this week — everyone sees the new version.
+                  </div>
+                )}
                 <LessonGenerator
                   langCode={langCode}
                   weekNumber={weekNumber}
+                  initialContent={lesson?.content}
                   onSaved={() => { refresh(); setActiveTab("lesson"); }}
                 />
               </TabsContent>

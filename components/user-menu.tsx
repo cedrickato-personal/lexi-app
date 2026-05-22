@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { LogOut, Settings, User as UserIcon, Cloud, CloudOff, Loader2 } from "lucide-react";
+import { LogOut, Settings, User as UserIcon, Cloud, CloudOff, Loader2, ShieldCheck } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -13,7 +13,7 @@ import { useAuth } from "@/components/auth-provider";
 import { toast } from "sonner";
 
 export function UserMenu() {
-  const { user, mode, loading, signOut, configured } = useAuth();
+  const { user, mode, loading, signOut, configured, isAdmin } = useAuth();
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -122,6 +122,16 @@ export function UserMenu() {
           )}
         </div>
         <div className="p-1.5">
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-2 px-2 h-8 rounded-md text-xs font-medium text-orange-800 hover:bg-orange-50 transition-colors"
+              onClick={() => setOpen(false)}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Admin · activity log
+            </Link>
+          )}
           <Link
             href="/profile"
             className="flex items-center gap-2 px-2 h-8 rounded-md text-xs font-medium text-stone-700 hover:bg-stone-100 transition-colors"

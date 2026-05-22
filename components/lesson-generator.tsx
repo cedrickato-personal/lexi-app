@@ -4,8 +4,8 @@ import { useState, useCallback, useMemo } from "react";
 import { Copy, Check, ExternalLink, Save, Clipboard } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { buildPrompt } from "@/lib/prompt-builder";
-import { saveLesson, getProfile } from "@/lib/storage";
-import { pushLesson } from "@/lib/storage-sync";
+import { getProfile } from "@/lib/storage";
+import { saveSharedLesson } from "@/lib/lessons";
 import { useAuth } from "@/components/auth-provider";
 import { toast } from "sonner";
 
@@ -85,17 +85,22 @@ export function LessonGenerator({
     }
   }, []);
 
-  const handleSave = useCallback(() => {
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = useCallback(async () => {
     if (response.trim().length < 200) {
       toast.error("Lesson seems too short. Add more content or paste the full response.");
       return;
     }
     const content = response.trim();
-    saveLesson(langCode, weekNumber, content);
-    if (user) {
-      pushLesson(user.id, langCode, weekNumber, content).catch(() => {});
+    setSaving(true);
+    const result = await saveSharedLesson(langCode, weekNumber, content, user);
+    setSaving(false);
+    if (!result.ok) {
+      toast.error(result.error ?? "Couldn't publish lesson");
+      return;
     }
-    toast.success(user ? "Lesson saved · synced to cloud" : "Lesson saved");
+    toast.success("Lesson published — everyone can see it now");
     onSaved();
   }, [langCode, weekNumber, response, onSaved, user]);
 
@@ -183,11 +188,11 @@ export function LessonGenerator({
               </p>
               <button
                 onClick={handleSave}
-                disabled={!canSave}
+                disabled={!canSave || saving}
                 className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md text-sm font-medium bg-stone-900 hover:bg-stone-800 text-white disabled:bg-stone-200 disabled:text-stone-400 disabled:cursor-not-allowed shadow-sm"
               >
                 <Save className="w-4 h-4" />
-                Save lesson
+                {saving ? "Publishing…" : "Publish lesson"}
               </button>
             </div>
           </div>

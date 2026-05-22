@@ -6,34 +6,34 @@ import { ArrowRight, Library, Sparkles } from "lucide-react";
 import { Nav } from "@/components/nav";
 import { LanguageProgressGrid, LanguagePriorityRow } from "@/components/language-progress-grid";
 import { LANGUAGES, LANGUAGES_LIST } from "@/lib/languages";
-import {
-  getAllProgress,
-  getLastUsed,
-  getMostRecent,
-  getProfile,
-} from "@/lib/storage";
+import { getLastUsed, getProfile } from "@/lib/storage";
+import { fetchAllAvailableCounts } from "@/lib/lessons";
 import type { LearnerProfile } from "@/lib/types";
 
 export default function HomePage() {
-  const [progressByLang, setProgressByLang] = useState<Record<string, { completed: number; total: number }>>({});
+  const [availableByLang, setAvailableByLang] = useState<Record<string, number>>({});
   const [lastUsed, setLastUsed] = useState<string | null>(null);
   const [profile, setProfile] = useState<LearnerProfile | null>(null);
-  const [mostRecent, setMostRecent] = useState<{ lang: string; week: number } | null>(null);
 
   useEffect(() => {
-    setProgressByLang(getAllProgress());
     setLastUsed(getLastUsed());
     setProfile(getProfile());
-    const recent = getMostRecent();
-    if (recent) setMostRecent({ lang: recent.lang, week: recent.week });
+    fetchAllAvailableCounts().then(setAvailableByLang);
   }, []);
 
   const hasProfile = profile !== null;
   const priorityLanguages = (profile?.interestedLanguages ?? []).filter((c) => LANGUAGES[c]);
 
-  const totalCompleted = Object.values(progressByLang).reduce((s, p) => s + p.completed, 0);
-  const totalPossible = Object.values(progressByLang).reduce((s, p) => s + p.total, 0);
-  const studyingCount = Object.values(progressByLang).filter((p) => p.completed > 0).length;
+  // Counts reflect shared (published) lessons — the same for everyone.
+  const progressByLang: Record<string, { completed: number; total: number }> = {};
+  for (const code of Object.keys(LANGUAGES)) {
+    progressByLang[code] = {
+      completed: availableByLang[code] ?? 0,
+      total: LANGUAGES[code].totalWeeks,
+    };
+  }
+  const totalCompleted = Object.values(availableByLang).reduce((s, n) => s + n, 0);
+  const languagesWithContent = Object.values(availableByLang).filter((n) => n > 0).length;
 
   return (
     <>
@@ -58,12 +58,11 @@ export default function HomePage() {
           <div className="flex items-center gap-3 flex-wrap">
             {lastUsed && LANGUAGES[lastUsed] ? (
               <Link
-                href={mostRecent ? `/${mostRecent.lang}/lesson/${mostRecent.week}` : `/${lastUsed}/curriculum`}
+                href={`/${lastUsed}/curriculum`}
                 className="inline-flex items-center justify-center gap-2 rounded-lg h-11 px-6 text-sm font-medium bg-stone-900 hover:bg-stone-800 text-white transition-all shadow-sm hover:shadow"
               >
                 <Library className="w-4 h-4" />
                 Continue {LANGUAGES[lastUsed].name}
-                {mostRecent && <span className="text-stone-300 ml-1">· Week {mostRecent.week}</span>}
                 <ArrowRight className="w-4 h-4 ml-1 opacity-60" />
               </Link>
             ) : (
@@ -88,27 +87,24 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* PROGRESS SNAPSHOT */}
-        {(totalCompleted > 0 || studyingCount > 0) && (
+        {/* LIBRARY SNAPSHOT */}
+        {totalCompleted > 0 && (
           <section className="max-w-5xl mx-auto px-6 pb-20">
             <div className="bg-white rounded-2xl border border-stone-200/70 shadow-sm p-8">
               <p className="text-xs uppercase tracking-[0.18em] text-stone-400 font-medium mb-4">
-                Your Progress
+                Lesson Library
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12">
-                <Stat big={`${studyingCount}`} label={studyingCount === 1 ? "language" : "languages"} sub="being studied" />
-                <Stat big={`${totalCompleted.toLocaleString()}`} label={`/ ${totalPossible.toLocaleString()}`} sub="total lessons saved" />
-                {mostRecent && LANGUAGES[mostRecent.lang] && (
-                  <div>
-                    <p className="text-[10px] font-mono uppercase tracking-widest text-stone-400 mb-1">
-                      Most recent
-                    </p>
-                    <p className="font-display text-2xl font-semibold text-stone-900 leading-tight">
-                      {LANGUAGES[mostRecent.lang].name}
-                    </p>
-                    <p className="text-sm text-stone-500 mt-0.5">Week {mostRecent.week}</p>
-                  </div>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12">
+                <Stat
+                  big={`${languagesWithContent}`}
+                  label={languagesWithContent === 1 ? "language" : "languages"}
+                  sub="with lessons available"
+                />
+                <Stat
+                  big={`${totalCompleted.toLocaleString()}`}
+                  label="lessons"
+                  sub="published and ready to learn"
+                />
               </div>
             </div>
           </section>
