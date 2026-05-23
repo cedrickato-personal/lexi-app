@@ -4,7 +4,6 @@ import { useState, useCallback, useMemo } from "react";
 import { Copy, Check, ExternalLink, Save, Clipboard } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { buildPrompt } from "@/lib/prompt-builder";
-import { getProfile } from "@/lib/storage";
 import { saveSharedLesson } from "@/lib/lessons";
 import { useAuth } from "@/components/auth-provider";
 import { toast } from "sonner";
@@ -63,7 +62,11 @@ export function LessonGenerator({
 
   const prompt = useMemo(() => {
     try {
-      return buildPrompt(langCode, weekNumber, getProfile());
+      // Shared lessons are canonical, profile-agnostic content. We deliberately
+      // pass NO learner profile here so the master lesson is the framework's
+      // balanced default — never biased toward the admin's CliftonStrengths.
+      // Per-learner Gallup/VARK personalization happens later, at delivery time.
+      return buildPrompt(langCode, weekNumber, null);
     } catch (err) {
       return `# Error building prompt\n\n${err instanceof Error ? err.message : "Unknown error"}`;
     }
