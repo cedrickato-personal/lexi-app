@@ -1,12 +1,37 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { Copy, Check, ExternalLink, Save, Clipboard } from "lucide-react";
+import { Copy, Check, ExternalLink, Save, AlertTriangle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { buildPrompt } from "@/lib/prompt-builder";
 import { saveSharedLesson } from "@/lib/lessons";
 import { useAuth } from "@/components/auth-provider";
 import { toast } from "sonner";
+
+/**
+ * Detects when the pasted text is actually the PROMPT (meant for Claude.ai),
+ * not the lesson Claude wrote back. The prompt has unmistakable signatures.
+ */
+function looksLikePrompt(text: string): boolean {
+  const signals = [
+    "Begin the lesson now.",
+    "You are creating Week",
+    "Pedagogy Context (universal principles)",
+    "Output ONLY the lesson",
+    "## Required Lesson Structure",
+    "Language Pedagogy Foundations",
+  ];
+  const hits = signals.filter((s) => text.includes(s)).length;
+  return hits >= 2;
+}
 
 interface LessonGeneratorProps {
   langCode: string;
@@ -79,22 +104,10 @@ export function LessonGenerator({
     setTimeout(() => setCopied(false), 2500);
   }, [prompt]);
 
-  const handlePasteFromClipboard = useCallback(async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text) setResponse(text);
-    } catch {
-      toast.error("Couldn't read clipboard");
-    }
-  }, []);
-
   const [saving, setSaving] = useState(false);
+  const [confirmPromptOpen, setConfirmPromptOpen] = useState(false);
 
-  const handleSave = useCallback(async () => {
-    if (response.trim().length < 200) {
-      toast.error("Lesson seems too short. Add more content or paste the full response.");
-      return;
-    }
+  const doPublish = useCallback(async () => {
     const content = response.trim();
     setSaving(true);
     const result = await saveSharedLesson(langCode, weekNumber, content, user);
@@ -106,6 +119,20 @@ export function LessonGenerator({
     toast.success("Lesson published — everyone can see it now");
     onSaved();
   }, [langCode, weekNumber, response, onSaved, user]);
+
+  const handleSave = useCallback(() => {
+    if (response.trim().length < 200) {
+      toast.error("Lesson seems too short. Add more content or paste the full response.");
+      return;
+    }
+    // Guard: catch the common mistake of pasting the PROMPT back instead of
+    // Claude's generated lesson. The prompt has unmistakable signatures.
+    if (looksLikePrompt(response)) {
+      setConfirmPromptOpen(true);
+      return;
+    }
+    doPublish();
+  }, [response, doPublish]);
 
   const charCount = response.length;
   const minChars = 200;
@@ -163,15 +190,12 @@ export function LessonGenerator({
 
         <Step n="03" title="Paste the response back" active={opened || copied} done={canSave}>
           <div className="bg-white rounded-xl border border-stone-200/70 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-stone-500">Paste the full lesson markdown below.</p>
-              <button
-                onClick={handlePasteFromClipboard}
-                className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-orange-800 transition-colors"
-              >
-                <Clipboard className="w-3 h-3" />
-                Paste from clipboard
-              </button>
+            <div className="mb-3">
+              <p className="text-xs text-stone-500">
+                Paste <strong className="text-stone-700">Claude&apos;s lesson</strong> below — the response it
+                writes, starting with <code className="text-[11px] bg-stone-100 px-1 rounded">### 1. Lesson Overview</code>.
+                Not the prompt you copied in Step 1.
+              </p>
             </div>
             <Textarea
               value={response}
@@ -201,6 +225,45 @@ export function LessonGenerator({
           </div>
         </Step>
       </div>
+
+      {/* Guard: pasted text looks like the prompt, not Claude's lesson */}
+      <Dialog open={confirmPromptOpen} onOpenChange={setConfirmPromptOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-700">
+              <AlertTriangle className="w-5 h-5" />
+              That looks like the prompt, not the lesson
+            </DialogTitle>
+            <DialogDescription className="space-y-2">
+              <span className="block">
+                What you pasted contains the prompt&apos;s own text (pedagogy foundations,
+                &ldquo;Begin the lesson now&rdquo;, etc.) — that&apos;s the text you send <em>to</em> Claude.ai,
+                not the lesson it writes back.
+              </span>
+              <span className="block">
+                The correct flow: paste the prompt into Claude.ai → wait for the lesson →
+                copy <strong>Claude&apos;s response</strong> (it starts with
+                <code className="text-[11px] bg-stone-100 px-1 rounded mx-1">### 1. Lesson Overview</code>
+                and is full of {langCode.toUpperCase()} vocabulary &amp; grammar) → paste that here.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              onClick={() => setConfirmPromptOpen(false)}
+              className="px-4 h-9 rounded-md border border-stone-200 text-sm hover:bg-stone-50"
+            >
+              Let me fix it
+            </button>
+            <button
+              onClick={() => { setConfirmPromptOpen(false); doPublish(); }}
+              className="px-4 h-9 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-sm"
+            >
+              Publish anyway
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

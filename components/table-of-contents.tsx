@@ -83,7 +83,7 @@ export function TableOfContents({
   return (
     <nav
       aria-label={title}
-      className={`${className ?? ""} text-sm`}
+      className={`${className ?? ""} text-sm max-h-[calc(100vh-7rem)] overflow-y-auto overscroll-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden`}
     >
       <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-stone-400 mb-3">
         {title}
